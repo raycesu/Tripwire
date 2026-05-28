@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1779981255795,
+      "tag": "0000_grey_meggan",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779982951989,
+      "tag": "0001_lucky_eternity",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779990730545,
+      "tag": "0002_phase5_alerts_telegram",
+      "breakpoints": true
+    }
+  ]
+}

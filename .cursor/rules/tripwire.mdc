@@ -1,0 +1,238 @@
+---
+description: Tripwire project rules and implementation conventions
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Tripwire Rules
+
+## Project Identity
+
+Tripwire is a personal asset score machine. Users sign in, add crypto and stock assets to a watchlist, define score threshold alerts, and receive Telegram notifications when fresh score updates qualify.
+
+The product is a contrarian opportunity detector:
+
+- `+2` means deeply oversold / strong opportunity.
+- `0` means neutral.
+- `-2` means crowded / overheated.
+- This convention applies to every sector: Macro, Relativity, and Volume.
+
+Use the implementation plan as the source of truth:
+
+- `IMPLEMENTATION_PLAN.md`
+
+## Tech Stack
+
+Use:
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui and Radix primitives
+- lucide-react icons
+- Clerk for auth
+- Neon Postgres
+- Drizzle ORM
+- Zod for validation
+- cron-job.org calling protected Vercel API routes
+- One shared Tripwire Telegram bot
+
+Avoid adding major services or frameworks unless the plan explicitly changes.
+
+## Architecture Rules
+
+Keep scoring logic out of React components and route handlers.
+
+Preferred structure:
+
+```txt
+src/
+  app/
+  components/
+  db/
+  lib/
+    scoring/
+    providers/
+    jobs/
+```
+
+Rules:
+
+- UI reads stored score snapshots; it should not compute production scores on page load.
+- API routes should validate input, auth, and call reusable server functions.
+- Scheduled routes should call job functions and return small responses.
+- Provider code should normalize external API responses into internal types.
+- Store component breakdowns in `components_json` so the UI can explain scores.
+
+## Database Rules
+
+Use Drizzle schema and migrations.
+
+Important entities:
+
+- `users`: Clerk user mapping plus Telegram chat connection fields.
+- `assets`: asset metadata, provider resolution, benchmark symbol.
+- `watchlist_items`: per-user watched assets.
+- `score_snapshots`: sector and composite scores.
+- `alert_rules`: user-defined threshold rules.
+- `alert_events`: delivery and duplicate-prevention history.
+- `scheduled_job_runs`: cron/job observability.
+- `provider_cache`: external provider response cache.
+
+Important constraints:
+
+- `watchlist_items`: unique `user_id + asset_id`.
+- `score_snapshots`: unique `asset_id + sector + valid_for_date + cadence`.
+- `alert_events`: unique `alert_rule_id + score_snapshot_id`.
+
+Never silently ignore null/stale data. Store `is_null`, `null_reason`, `is_stale`, `computed_at`, and provider metadata.
+
+## Auth Rules
+
+Clerk is the auth source of truth.
+
+- Protect dashboard, watchlist, alerts, and settings routes.
+- Never trust client-provided `user_id`.
+- Always derive the current user from Clerk server auth.
+- User data must be scoped by the authenticated user.
+
+## Scoring Engine Rules
+
+Scores are from `-2` to `+2`.
+
+Composite:
+
+- Average only valid, non-null, non-stale sector scores from Macro, Relativity, and Volume.
+- Composite is valid only when all three sectors are valid (3/3).
+- If any sector is null, stale, or invalid, composite should be null with `null_reason = "insufficient_valid_sectors"`.
+- Store included sectors in the composite breakdown.
+
+Freshness:
+
+- Daily sectors stale after 36 hours.
+- Weekly sectors stale after 8 days.
+- Do not mix stale sectors into a fresh composite.
+
+Macro:
+
+- Crypto uses Fear & Greed and BTC weekly RSI.
+- Stocks use VIX and S&P 500 weekly RSI.
+- Fetch market-wide macro once per run and reuse.
+
+Relativity:
+
+- Crypto assets benchmark against BTC.
+- BTC benchmarks against SPY.
+- Stocks benchmark against SPY.
+- Formula: `clamp((benchmark_rsi - asset_rsi) / 8, -2, +2)`.
+
+Volume:
+
+- Use 30 completed weekly OHLCV candles.
+- Exclude in-progress weekly candles for stable scores.
+- Formula: `clamp(((V_trend * 0.60) + (P_context * 0.40)) * gate * decel_factor * 2, -2, +2)`.
+- Use Wilder RSI(14) and the latest RSI output value.
+
+## Provider Rules
+
+Crypto OHLCV:
+
+- Try Binance Global first.
+- Fall back to Binance US.
+- Use `<BASE>USDT` pairs only for MVP.
+- If neither provider has the pair, mark unsupported with a clear reason.
+- Do not silently fall back to futures, `BTC`, `USDC`, or `USD` pairs.
+
+Stocks:
+
+- Use the chosen free stock OHLCV provider after validation.
+- Use FRED for VIX and S&P 500 macro data.
+- Market holidays should use the last available trading day of the week.
+
+Provider failures:
+
+- One failed asset should not fail the entire scoring run.
+- Return null snapshots with clear reasons.
+- Cache provider metadata where practical.
+
+## Alerts And Telegram
+
+Use one shared Tripwire Telegram bot.
+
+- Store `TELEGRAM_BOT_TOKEN` in environment variables.
+- Store each user's Telegram `chat_id` in the database.
+- Connect Telegram using a short-lived single-use connect code and deep link.
+- Never expose the bot token to the browser or logs.
+
+Alert behavior:
+
+- Alerts are level-based, not crossing-based.
+- If a fresh score is above the user's threshold, send an alert.
+- If the next fresh score is still above the threshold, send another alert.
+- When a user creates a new rule and the latest score already qualifies, send an initial-match alert.
+- Never duplicate alerts for the same `alert_rule_id + score_snapshot_id`.
+
+Alert storm safety:
+
+- Default max 10 alerts per user per scoring run.
+- Default max 20 Telegram messages globally per minute.
+- Composite alerts should be prioritized over sector alerts when caps apply.
+- Log skipped alerts.
+
+If Telegram returns a permanent blocked/invalid-chat error, mark the user's Telegram delivery state disconnected and stop sending until they reconnect.
+
+## Cron Rules
+
+cron-job.org triggers protected Vercel API routes.
+
+- Require `CRON_SECRET`.
+- Return `401` when missing or invalid.
+- Keep cron route responses small.
+- Log run details to `scheduled_job_runs`.
+- Make jobs idempotent.
+- Split into batches if Vercel function limits become a problem.
+
+## TypeScript Rules
+
+- Prefer strict TypeScript types.
+- Use Zod at boundaries: API requests, env vars, provider responses where practical.
+- Avoid `any`; use `unknown` and parse.
+- Keep provider response types separate from normalized internal types.
+- Use small pure functions for formulas so they are easy to unit test.
+
+## UI Rules
+
+Positive is opportunity, not generic bullishness.
+
+Preferred labels:
+
+- `+1.5` to `+2.0`: Strong Opportunity
+- `+1.0` to `+1.49`: Opportunity
+- `-0.49` to `+0.99`: Neutral
+- `-0.5` to `-0.99`: Caution
+- `-1.0` to `-2.0`: Crowded / Overheated
+
+Show:
+
+- Score value
+- Included sectors
+- Stale/null badges
+- Component breakdowns
+- Last computed time
+- Clear unsupported asset reasons
+
+Avoid making the UI say simply "bullish" or "bearish" as the primary interpretation.
+
+## Common Mistakes To Avoid
+
+- Do not compute production scores in client components.
+- Do not use stale sectors in a fresh composite.
+- Do not compute composite unless all three sectors (Macro, Relativity, Volume) are valid.
+- Do not use in-progress weekly candles for stable weekly scores.
+- Do not index RSI output as if it aligns one-to-one with input candles.
+- Do not let one provider failure crash the entire scoring run.
+- Do not send duplicate Telegram alerts for the same snapshot.
+- Do not store the shared Telegram bot token in Neon.
+- Do not expose another user's watchlist, alerts, chat ID, or score history.
+- Do not guess provider symbols without recording the resolution result.
