@@ -4,7 +4,8 @@ import { AssetResolutionBadge } from "@/components/assets/asset-resolution-badge
 import { ScoreHistorySection } from "@/components/scores/score-history-section"
 import { SectorScoresPanel } from "@/components/scores/sector-scores-panel"
 import { WatchlistToggleButton } from "@/components/watchlist/watchlist-toggle-button"
-import { getAssetBySymbol, isAssetOnWatchlist } from "@/lib/assets/queries"
+import { ensureAsset } from "@/lib/assets/ensure-asset"
+import { isAssetOnWatchlist } from "@/lib/assets/queries"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
 import { getLatestSnapshotsForAsset, getScoreHistory } from "@/lib/scores/queries"
 
@@ -15,7 +16,7 @@ type AssetDetailPageProps = {
 export default async function AssetDetailPage({ params }: AssetDetailPageProps) {
   const { symbol } = await params
   const user = await ensureDbUser()
-  const asset = await getAssetBySymbol(symbol)
+  const asset = await ensureAsset(symbol)
 
   if (!asset) {
     notFound()

@@ -20,6 +20,7 @@ const exchangeInfoSchema = z.object({
       symbol: z.string(),
       status: z.string(),
       quoteAsset: z.string(),
+      baseAsset: z.string(),
     })
   ),
 })
@@ -66,6 +67,30 @@ export const loadActiveUsdtSymbols = async (): Promise<Set<string>> => {
 export const hasActiveUsdtPair = async (symbol: string): Promise<boolean> => {
   const symbols = await loadActiveUsdtSymbols()
   return symbols.has(symbol.toUpperCase())
+}
+
+export type UsdtBaseCatalogEntry = {
+  symbol: string
+  name: string
+  providerSymbol: string
+  source: "binance_us"
+}
+
+export const listTradableUsdtBases = async (): Promise<UsdtBaseCatalogEntry[]> => {
+  const info = await getExchangeInfo()
+
+  return info.symbols
+    .filter(
+      (entry) =>
+        entry.status === "TRADING" && entry.quoteAsset === "USDT" && entry.symbol.endsWith("USDT")
+    )
+    .map((entry) => ({
+      symbol: entry.baseAsset.toUpperCase(),
+      name: entry.baseAsset.toUpperCase(),
+      providerSymbol: entry.symbol,
+      source: "binance_us" as const,
+    }))
+    .sort((left, right) => left.symbol.localeCompare(right.symbol))
 }
 
 export const getWeeklyKlinesRaw = async (

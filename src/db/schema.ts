@@ -24,6 +24,24 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 })
 
+export const assetCatalog = pgTable(
+  "asset_catalog",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    symbol: varchar("symbol", { length: 32 }).notNull(),
+    name: varchar("name", { length: 191 }).notNull(),
+    assetType: varchar("asset_type", { length: 16 }).notNull(),
+    source: varchar("source", { length: 32 }).notNull(),
+    providerSymbol: varchar("provider_symbol", { length: 64 }),
+    syncedAt: timestamp("synced_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("asset_catalog_symbol_type_unique").on(table.symbol, table.assetType),
+    index("asset_catalog_symbol_idx").on(table.symbol),
+    index("asset_catalog_asset_type_idx").on(table.assetType),
+  ]
+)
+
 export const assets = pgTable(
   "assets",
   {
@@ -266,6 +284,7 @@ export const scoreSnapshotsRelations = relations(scoreSnapshots, ({ one, many })
 }))
 
 export type User = typeof users.$inferSelect
+export type AssetCatalog = typeof assetCatalog.$inferSelect
 export type Asset = typeof assets.$inferSelect
 export type WatchlistItem = typeof watchlistItems.$inferSelect
 export type AlertRule = typeof alertRules.$inferSelect
@@ -275,7 +294,11 @@ export type ScoreSnapshot = typeof scoreSnapshots.$inferSelect
 export type ProviderCache = typeof providerCache.$inferSelect
 export type ScheduledJobRun = typeof scheduledJobRuns.$inferSelect
 
-export type ScheduledJobName = "score-daily" | "score-weekly" | "evaluate-alerts"
+export type ScheduledJobName =
+  | "score-daily"
+  | "score-weekly"
+  | "evaluate-alerts"
+  | "sync-asset-catalog"
 export type ScheduledJobTriggeredBy = "cron-job.org" | "manual" | "admin"
 export type ScheduledJobStatus = "running" | "success" | "partial_failure" | "failed"
 

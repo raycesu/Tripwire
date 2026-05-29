@@ -29,6 +29,7 @@ This confirms database connectivity only. It does not verify that scoring cron j
 | `/api/cron/score-daily` | `POST` | Refresh Macro, recompute composite, evaluate alerts |
 | `/api/cron/score-weekly` | `POST` | Refresh Relativity and Volume, recompute composite, evaluate alerts |
 | `/api/cron/evaluate-alerts` | `POST` | Catch-up unsent qualifying alerts and retry failed Telegram deliveries |
+| `/api/cron/sync-asset-catalog` | `POST` | Refresh searchable asset catalog from Binance and Twelve Data |
 
 ### Authentication
 
@@ -66,6 +67,7 @@ Replace `https://your-app.vercel.app` with your production domain.
 | Tripwire Daily Scores | `https://your-app.vercel.app/api/cron/score-daily` | Daily at 00:30 | Macro + composite + alerts |
 | Tripwire Weekly Scores | `https://your-app.vercel.app/api/cron/score-weekly` | Monday at 01:00 | After weekly candle close |
 | Tripwire Alert Retry | `https://your-app.vercel.app/api/cron/evaluate-alerts` | Every 4–6 hours | Optional; retries failed/unsent alerts |
+| Tripwire Catalog Sync | `https://your-app.vercel.app/api/cron/sync-asset-catalog` | Daily at 00:15 | Binance USDT pairs + Twelve Data stocks |
 
 For each job in cron-job.org:
 
@@ -97,6 +99,12 @@ Manual scoring (also logs to `scheduled_job_runs` with `triggered_by: manual`):
 npm run scores:run -- --daily
 npm run scores:run -- --weekly
 npm run scores:run -- --all
+```
+
+Catalog sync (also logs to `scheduled_job_runs`):
+
+```bash
+npm run catalog:sync
 ```
 
 ## Database migration

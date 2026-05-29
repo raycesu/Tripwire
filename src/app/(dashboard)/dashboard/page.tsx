@@ -72,9 +72,9 @@ export default async function DashboardPage() {
         {watchlist.length === 0 ? (
           <EmptyState
             title="No assets on your watchlist"
-            description="Add BTC, ETH, SOL, and other MVP assets from the catalog to start monitoring scores."
+            description="Search crypto and stock tickers on the asset catalog, open a symbol, then add it to your watchlist."
             actionHref="/assets"
-            actionLabel="Go to asset catalog"
+            actionLabel="Search assets"
           />
         ) : (
           <>

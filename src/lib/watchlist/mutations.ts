@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm"
 import { db } from "@/db/client"
 import { alertRules, assets, watchlistItems } from "@/db/schema"
+import { ensureAsset } from "@/lib/assets/ensure-asset"
 import { getAssetBySymbol } from "@/lib/assets/queries"
 
 export type WatchlistMutationResult =
@@ -11,7 +12,8 @@ export const addToWatchlist = async (
   userId: string,
   symbol: string
 ): Promise<WatchlistMutationResult> => {
-  const asset = await getAssetBySymbol(symbol)
+  const ensured = await ensureAsset(symbol)
+  const asset = ensured ?? (await getAssetBySymbol(symbol))
 
   if (!asset) {
     return { ok: false, code: "NOT_FOUND" }

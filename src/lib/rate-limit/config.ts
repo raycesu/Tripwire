@@ -5,6 +5,7 @@ export type RateLimitRouteSlug =
   | "alerts-mutate"
   | "alerts-export"
   | "watchlist-add"
+  | "asset-search"
 
 export type RateLimitConfig = {
   limit: number
@@ -18,4 +19,5 @@ export const RATE_LIMITS: Record<RateLimitRouteSlug, RateLimitConfig> = {
   "alerts-mutate": { limit: 60, windowSeconds: 3600 },
   "alerts-export": { limit: 30, windowSeconds: 3600 },
   "watchlist-add": { limit: 30, windowSeconds: 3600 },
+  "asset-search": { limit: 120, windowSeconds: 3600 },
 }

@@ -1,10 +1,7 @@
-import { eq } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import { db } from "@/db/client"
 import { assets } from "@/db/schema"
 import { resolveCryptoSymbol } from "@/providers/crypto-resolver"
-
-const CRYPTO_SYMBOLS = ["BTC", "ETH", "SOL", "HYPE", "ZEC"] as const
-const STOCK_SYMBOLS = ["MSTR", "TSLA", "NVDA", "COIN"] as const
 
 export type ResolveAssetResult = {
   symbol: string
@@ -68,52 +65,79 @@ export const resolveCryptoAssetBySymbol = async (
   }
 }
 
-export const resolveStockAssets = async (): Promise<ResolveAssetResult[]> => {
-  const results: ResolveAssetResult[] = []
+export const resolveStockAssetBySymbol = async (
+  symbol: string
+): Promise<ResolveAssetResult | null> => {
+  const row = await db.query.assets.findFirst({
+    where: eq(assets.symbol, symbol.toUpperCase()),
+  })
+
+  if (!row || row.assetType !== "stock") {
+    return null
+  }
+
   const now = new Date()
 
-  for (const symbol of STOCK_SYMBOLS) {
-    const row = await db.query.assets.findFirst({
-      where: eq(assets.symbol, symbol),
-    })
-
-    if (!row) {
-      continue
-    }
-
-    await db
-      .update(assets)
-      .set({
-        providerName: "twelve_data",
-        providerSymbol: symbol,
-        resolutionStatus: "resolved",
-        unsupportedReason: null,
-        updatedAt: now,
-      })
-      .where(eq(assets.id, row.id))
-
-    results.push({
-      symbol,
-      resolutionStatus: "resolved",
+  await db
+    .update(assets)
+    .set({
       providerName: "twelve_data",
+      providerSymbol: row.symbol,
+      resolutionStatus: "resolved",
       unsupportedReason: null,
+      updatedAt: now,
     })
+    .where(eq(assets.id, row.id))
+
+  return {
+    symbol: row.symbol,
+    resolutionStatus: "resolved",
+    providerName: "twelve_data",
+    unsupportedReason: null,
+  }
+}
+
+export const resolveAssetsBySymbols = async (
+  symbols: string[]
+): Promise<ResolveAssetResult[]> => {
+  const normalized = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))]
+  const results: ResolveAssetResult[] = []
+
+  if (normalized.length === 0) {
+    return results
+  }
+
+  const rows = await db.query.assets.findMany({
+    where: inArray(assets.symbol, normalized),
+  })
+
+  for (const row of rows) {
+    if (row.assetType === "crypto") {
+      const result = await resolveCryptoAssetBySymbol(row.symbol)
+
+      if (result) {
+        results.push(result)
+      }
+    } else if (row.assetType === "stock") {
+      const result = await resolveStockAssetBySymbol(row.symbol)
+
+      if (result) {
+        results.push(result)
+      }
+    }
   }
 
   return results
 }
 
-export const resolveAllSeedAssets = async (): Promise<ResolveAssetResult[]> => {
-  const cryptoResults: ResolveAssetResult[] = []
+export const resolvePendingAssets = async (): Promise<ResolveAssetResult[]> => {
+  const rows = await db.query.assets.findMany({
+    where: eq(assets.resolutionStatus, "needs_review"),
+  })
 
-  for (const symbol of CRYPTO_SYMBOLS) {
-    const result = await resolveCryptoAssetBySymbol(symbol)
-
-    if (result) {
-      cryptoResults.push(result)
-    }
-  }
-
-  const stockResults = await resolveStockAssets()
-  return [...cryptoResults, ...stockResults]
+  return resolveAssetsBySymbols(rows.map((row) => row.symbol))
 }
+
+/** @deprecated Use resolvePendingAssets or resolveAssetsBySymbols */
+export const resolveAllSeedAssets = async (): Promise<ResolveAssetResult[]> =>
+  resolvePendingAssets()

@@ -5,18 +5,25 @@ It resolves the open product-decision items from `IMPLEMENTATION_PLAN.md` and se
 
 ## Decision Summary
 
-## 1) MVP Asset Universe (Locked)
+## 1) MVP Asset Universe (Expanded)
+
+The original MVP seed set was:
 
 - **Crypto**: `BTC`, `ETH`, `SOL`, `HYPE`, `ZEC`
 - **Stocks**: `MSTR`, `TSLA`, `NVDA`, `COIN`
 
-**Rationale**
-- Keeps MVP focused with a high-signal starter set across crypto and equities
-- Aligns with the tested universe defined in the implementation roadmap
-- Reduces provider-symbol and data-quality ambiguity during early scoring engine work
+**Current product scope**
+
+- Searchable catalog synced from Binance Global/US active `USDT` spot pairs and Twelve Data common stocks
+- Users discover assets via typeahead search on `/assets`, open detail pages, then add to watchlist
+- Operational `assets` rows are created lazily when a supported catalog symbol is opened
+
+**Rationale (original MVP)**
+- Kept early scoring engine work focused with a high-signal starter set across crypto and equities
+- Reduced provider-symbol and data-quality ambiguity during initial development
 
 **Revisit Trigger**
-- Revisit after Phase 4 and Phase 6 once scoring + alerts are stable and provider reliability has been validated in production-like runs
+- Revisit catalog filters, international equities, or additional quote assets if provider coverage or compliance requirements change
 
 ## 2) Provider/API Key Ownership (Locked)
 
