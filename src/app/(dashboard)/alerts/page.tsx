@@ -1,16 +1,26 @@
 import Link from "next/link"
+import { AlertHistoryTimeline } from "@/components/alerts/alert-history-timeline"
 import { AlertRulesPanel } from "@/components/alerts/alert-rules-panel"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
-import { listAlertRulesForUser } from "@/lib/alerts/queries"
+import { listAlertEventsForUser, listAlertRulesForUser } from "@/lib/alerts/queries"
 import { toAlertRuleDto } from "@/lib/alerts/types"
 import { listUserWatchlist } from "@/lib/watchlist/queries"
 
 export default async function AlertsPage() {
   const user = await ensureDbUser()
-  const [rules, watchlist] = await Promise.all([
+  const [rules, watchlist, alertEvents] = await Promise.all([
     listAlertRulesForUser(user.id),
     listUserWatchlist(user.id),
+    listAlertEventsForUser(user.id, { limit: 50 }),
   ])
+
+  const watchlistOptions = watchlist.map((item) => ({
+    assetId: item.assetId,
+    symbol: item.asset.symbol,
+    name: item.asset.name,
+  }))
+
+  const assetSymbols = [...new Set(alertEvents.map((event) => event.assetSymbol))].sort()
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
@@ -27,14 +37,14 @@ export default async function AlertsPage() {
         </p>
       </div>
 
-      <AlertRulesPanel
-        initialRules={rules.map(toAlertRuleDto)}
-        watchlist={watchlist.map((item) => ({
-          assetId: item.assetId,
-          symbol: item.asset.symbol,
-          name: item.asset.name,
-        }))}
-      />
+      <AlertRulesPanel initialRules={rules.map(toAlertRuleDto)} watchlist={watchlistOptions} />
+
+      <section className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Alert history
+        </h2>
+        <AlertHistoryTimeline events={alertEvents} assetSymbols={assetSymbols} />
+      </section>
     </main>
   )
 }

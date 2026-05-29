@@ -1,8 +1,12 @@
 import Link from "next/link"
 import { AssetResolutionBadge } from "@/components/assets/asset-resolution-badge"
+import { ScoreChip } from "@/components/scores/score-chip"
 import { WatchlistToggleButton } from "@/components/watchlist/watchlist-toggle-button"
 import { listActiveAssets, getWatchlistAssetIdsForUser } from "@/lib/assets/queries"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
+import { getLatestSnapshotsForAssets } from "@/lib/scores/queries"
+import type { AssetDto } from "@/lib/assets/types"
+import type { AssetSnapshotsSummary } from "@/lib/scores/types"
 
 export default async function AssetsPage() {
   const user = await ensureDbUser()
@@ -11,11 +15,15 @@ export default async function AssetsPage() {
     getWatchlistAssetIdsForUser(user.id),
   ])
 
+  const snapshotsByAssetId = await getLatestSnapshotsForAssets(assets.map((asset) => asset.id))
+
   const cryptoAssets = assets.filter((asset) => asset.assetType === "crypto")
   const stockAssets = assets.filter((asset) => asset.assetType === "stock")
 
-  const renderAssetRow = (asset: (typeof assets)[number]) => {
+  const renderAssetRow = (asset: AssetDto) => {
     const isOnWatchlist = watchlistAssetIds.has(asset.id)
+    const summary: AssetSnapshotsSummary | undefined = snapshotsByAssetId.get(asset.id)
+    const composite = summary?.composite
 
     return (
       <tr key={asset.id} className="border-b border-border last:border-0">
@@ -27,6 +35,13 @@ export default async function AssetsPage() {
             {asset.symbol}
           </Link>
           <p className="text-sm text-muted-foreground">{asset.name}</p>
+        </td>
+        <td className="py-4 pr-4">
+          {composite && !composite.isNull ? (
+            <ScoreChip score={composite.score} size="sm" />
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
         </td>
         <td className="py-4 pr-4 capitalize text-sm text-muted-foreground">{asset.assetType}</td>
         <td className="py-4 pr-4">
@@ -52,8 +67,8 @@ export default async function AssetsPage() {
       <section>
         <h1 className="text-2xl font-semibold text-foreground">Asset catalog</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          MVP starter universe. Provider validation completes in Phase 3; you can add any seeded
-          asset to your watchlist now.
+          MVP starter universe with provider-validated symbols. Open an asset for sector breakdowns
+          and score history.
         </p>
       </section>
 
@@ -62,10 +77,11 @@ export default async function AssetsPage() {
           Crypto
         </h2>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left">
+          <table className="w-full min-w-[720px] text-left">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="pb-3 pr-4 font-medium">Asset</th>
+                <th className="pb-3 pr-4 font-medium">Composite</th>
                 <th className="pb-3 pr-4 font-medium">Type</th>
                 <th className="pb-3 pr-4 font-medium">Provider</th>
                 <th className="pb-3 pr-4 font-medium">Benchmark</th>
@@ -82,10 +98,11 @@ export default async function AssetsPage() {
           Stocks
         </h2>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left">
+          <table className="w-full min-w-[720px] text-left">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="pb-3 pr-4 font-medium">Asset</th>
+                <th className="pb-3 pr-4 font-medium">Composite</th>
                 <th className="pb-3 pr-4 font-medium">Type</th>
                 <th className="pb-3 pr-4 font-medium">Provider</th>
                 <th className="pb-3 pr-4 font-medium">Benchmark</th>

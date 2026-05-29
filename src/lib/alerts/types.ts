@@ -37,6 +37,19 @@ export const toAlertRuleDto = (rule: AlertRuleWithAsset): AlertRuleDto => ({
   updatedAt: rule.updatedAt,
 })
 
+export type AlertEventDto = {
+  id: string
+  assetSymbol: string
+  assetName: string
+  ruleLabel: string
+  triggeredValue: number
+  message: string
+  telegramStatus: string
+  telegramError: string | null
+  sentAt: Date | null
+  createdAt: Date
+}
+
 export const formatRuleLabel = (rule: Pick<AlertRuleDto, "scope" | "sector" | "operator" | "threshold">): string => {
   const sectorLabel =
     rule.scope === "composite"

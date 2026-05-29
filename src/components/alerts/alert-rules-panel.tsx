@@ -26,6 +26,7 @@ export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProp
   const [threshold, setThreshold] = useState("1.5")
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -85,6 +86,33 @@ export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProp
       router.refresh()
     } catch {
       setError("Failed to delete alert rule")
+    }
+  }
+
+  const handleExport = async () => {
+    setIsExporting(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/alerts/rules/export")
+
+      if (!response.ok) {
+        const data: { error?: string } = await response.json()
+        setError(data.error ?? "Failed to export alert rules")
+        return
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = "tripwire-alert-rules.json"
+      anchor.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setError("Failed to export alert rules")
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -206,10 +234,24 @@ export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProp
       </form>
 
       <section className="rounded-xl border border-border bg-card p-6">
-        <h2 className="text-lg font-semibold text-foreground">Your alert rules</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground">Your alert rules</h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={isExporting || rules.length === 0}
+            aria-label="Export alert rules as JSON backup"
+          >
+            {isExporting ? "Exporting…" : "Export rules"}
+          </Button>
+        </div>
 
         {rules.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">No alert rules yet.</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            No alert rules yet. Export is available after you create rules for backup.
+          </p>
         ) : (
           <ul className="mt-4 divide-y divide-border">
             {rules.map((rule) => (

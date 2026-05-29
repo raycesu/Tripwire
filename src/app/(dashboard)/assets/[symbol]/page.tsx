@@ -1,27 +1,15 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AssetResolutionBadge } from "@/components/assets/asset-resolution-badge"
-import { ScoreBreakdown } from "@/components/scores/score-breakdown"
+import { ScoreHistorySection } from "@/components/scores/score-history-section"
+import { SectorScoresPanel } from "@/components/scores/sector-scores-panel"
 import { WatchlistToggleButton } from "@/components/watchlist/watchlist-toggle-button"
-import { Badge } from "@/components/ui/badge"
-import {
-  getAssetBySymbol,
-  getLatestSnapshotsByAssetId,
-  isAssetOnWatchlist,
-} from "@/lib/assets/queries"
+import { getAssetBySymbol, isAssetOnWatchlist } from "@/lib/assets/queries"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
-import { formatScore, getScoreInterpretation } from "@/lib/scores/labels"
+import { getLatestSnapshotsForAsset, getScoreHistory } from "@/lib/scores/queries"
 
 type AssetDetailPageProps = {
   params: Promise<{ symbol: string }>
-}
-
-const formatComputedAt = (date: Date): string => {
-  return date.toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  })
 }
 
 export default async function AssetDetailPage({ params }: AssetDetailPageProps) {
@@ -33,13 +21,19 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
     notFound()
   }
 
-  const [snapshots, onWatchlist] = await Promise.all([
-    getLatestSnapshotsByAssetId(asset.id),
-    isAssetOnWatchlist(user.id, asset.id),
-  ])
+  const [summary, onWatchlist, compositeHistory, macroHistory, relativityHistory, volumeHistory] =
+    await Promise.all([
+      getLatestSnapshotsForAsset(asset.id),
+      isAssetOnWatchlist(user.id, asset.id),
+      getScoreHistory(asset.id, "composite"),
+      getScoreHistory(asset.id, "macro"),
+      getScoreHistory(asset.id, "relativity"),
+      getScoreHistory(asset.id, "volume"),
+    ])
 
-  const compositeSnapshot = snapshots.find((snapshot) => snapshot.sector === "composite")
-  const sectorSnapshots = snapshots.filter((snapshot) => snapshot.sector !== "composite")
+  const sectorSnapshots = [summary.macro, summary.relativity, summary.volume].filter(
+    (snapshot): snapshot is NonNullable<typeof snapshot> => snapshot !== null
+  )
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
@@ -91,79 +85,20 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
         ) : null}
       </section>
 
-      <section className="rounded-xl border border-border bg-card p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Composite score
-        </h2>
-        {compositeSnapshot && !compositeSnapshot.isNull && compositeSnapshot.score ? (
-          <div className="mt-4">
-            <p className="text-3xl font-semibold text-foreground">
-              {formatScore(compositeSnapshot.score)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {getScoreInterpretation(Number(compositeSnapshot.score))}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Computed {formatComputedAt(compositeSnapshot.computedAt)} UTC
-            </p>
-            {compositeSnapshot.isStale ? (
-              <Badge variant="warning" className="mt-2">
-                Stale
-              </Badge>
-            ) : null}
-            <ScoreBreakdown components={compositeSnapshot.componentsJson} />
-          </div>
-        ) : compositeSnapshot?.isNull ? (
-          <div className="mt-4">
-            <Badge variant="destructive">
-              {compositeSnapshot.nullReason ?? "Unavailable"}
-            </Badge>
-            <ScoreBreakdown components={compositeSnapshot.componentsJson} />
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground">
-            No composite score yet. Run scoring after Macro, Relativity, and Volume snapshots exist.
-          </p>
-        )}
-      </section>
+      <SectorScoresPanel
+        assetType={asset.assetType}
+        composite={summary.composite}
+        sectors={sectorSnapshots}
+      />
 
-      <section className="rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Sector snapshots
-        </h2>
-        {sectorSnapshots.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No sector scores stored yet. Add this asset to your watchlist and run{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">npm run scores:run -- --all</code>.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {sectorSnapshots.map((snapshot) => (
-              <li key={snapshot.id} className="py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <span className="font-medium capitalize">{snapshot.sector}</span>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {snapshot.cadence} · computed {formatComputedAt(snapshot.computedAt)} UTC
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {snapshot.isNull ? (
-                      <Badge variant="destructive">
-                        {snapshot.nullReason ?? "Unavailable"}
-                      </Badge>
-                    ) : (
-                      <span className="font-mono text-sm">{formatScore(snapshot.score)}</span>
-                    )}
-                    {snapshot.isStale ? <Badge variant="warning">Stale</Badge> : null}
-                  </div>
-                </div>
-                <ScoreBreakdown components={snapshot.componentsJson} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <ScoreHistorySection
+        historyBySector={{
+          composite: compositeHistory,
+          macro: macroHistory,
+          relativity: relativityHistory,
+          volume: volumeHistory,
+        }}
+      />
     </main>
   )
 }

@@ -1,21 +1,74 @@
-export const getScoreInterpretation = (scoreValue: number): string => {
+export type ScoreTone =
+  | "strong_opportunity"
+  | "opportunity"
+  | "neutral"
+  | "caution"
+  | "overheated"
+
+export const getScoreTone = (scoreValue: number): ScoreTone => {
   if (scoreValue >= 1.5) {
-    return "Strong Opportunity"
+    return "strong_opportunity"
   }
 
   if (scoreValue >= 1) {
-    return "Opportunity"
+    return "opportunity"
   }
 
   if (scoreValue >= -0.49) {
-    return "Neutral"
+    return "neutral"
   }
 
-  if (scoreValue >= -0.5) {
-    return "Caution"
+  if (scoreValue > -1) {
+    return "caution"
   }
 
-  return "Crowded / Overheated"
+  return "overheated"
+}
+
+export const getScoreInterpretation = (scoreValue: number): string => {
+  const tone = getScoreTone(scoreValue)
+
+  switch (tone) {
+    case "strong_opportunity":
+      return "Strong Opportunity"
+    case "opportunity":
+      return "Opportunity"
+    case "neutral":
+      return "Neutral"
+    case "caution":
+      return "Caution"
+    case "overheated":
+      return "Crowded / Overheated"
+  }
+}
+
+export const getScoreColorClasses = (tone: ScoreTone): string => {
+  switch (tone) {
+    case "strong_opportunity":
+      return "border-chart-1/50 bg-chart-1/15 text-chart-1"
+    case "opportunity":
+      return "border-chart-1/30 bg-chart-1/10 text-chart-1"
+    case "neutral":
+      return "border-border bg-muted/60 text-muted-foreground"
+    case "caution":
+      return "border-destructive/30 bg-destructive/10 text-destructive"
+    case "overheated":
+      return "border-destructive/50 bg-destructive/15 text-destructive"
+  }
+}
+
+export const getScoreToneFromString = (score: string | null): ScoreTone | null => {
+  if (score === null) {
+    return null
+  }
+
+  const numeric = Number(score)
+
+  if (Number.isNaN(numeric)) {
+    return null
+  }
+
+  return getScoreTone(numeric)
 }
 
 export const formatScore = (score: string | null): string => {
@@ -31,4 +84,12 @@ export const formatScore = (score: string | null): string => {
 
   const prefix = numeric > 0 ? "+" : ""
   return `${prefix}${numeric.toFixed(2)}`
+}
+
+export const formatComputedAt = (date: Date): string => {
+  return date.toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  })
 }

@@ -1,6 +1,8 @@
+import { runScheduledJob } from "@/lib/jobs/run-scheduled-job"
 import { runDailyScoresWithAlerts } from "@/jobs/run-daily-scores"
 import { runWeeklyScoresWithAlerts } from "@/jobs/run-weekly-scores"
 import type { AlertRunSummary, JobRunSummary } from "@/jobs/types"
+import { redactSecrets } from "@/lib/logging/redact-secrets"
 
 const printSummary = (label: string, summary: JobRunSummary) => {
   console.log(`\n${label}`)
@@ -37,19 +39,47 @@ const run = async () => {
   }
 
   if (runDaily) {
-    const { summary, alertSummary } = await runDailyScoresWithAlerts()
-    printSummary("Daily scores (Macro + Composite)", summary)
-    printAlertSummary("Daily alert evaluation", alertSummary)
+    const response = await runScheduledJob({
+      jobName: "score-daily",
+      triggeredBy: "manual",
+      execute: () => runDailyScoresWithAlerts(),
+    })
+
+    console.log("\nScheduled job run")
+    console.log(`  job: ${response.jobName}`)
+    console.log(`  status: ${response.status}`)
+
+    if (response.summary) {
+      printSummary("Daily scores (Macro + Composite)", response.summary)
+    }
+
+    if (response.alertSummary) {
+      printAlertSummary("Daily alert evaluation", response.alertSummary)
+    }
   }
 
   if (runWeekly) {
-    const { summary, alertSummary } = await runWeeklyScoresWithAlerts()
-    printSummary("Weekly scores (Relativity + Volume + Composite)", summary)
-    printAlertSummary("Weekly alert evaluation", alertSummary)
+    const response = await runScheduledJob({
+      jobName: "score-weekly",
+      triggeredBy: "manual",
+      execute: () => runWeeklyScoresWithAlerts(),
+    })
+
+    console.log("\nScheduled job run")
+    console.log(`  job: ${response.jobName}`)
+    console.log(`  status: ${response.status}`)
+
+    if (response.summary) {
+      printSummary("Weekly scores (Relativity + Volume + Composite)", response.summary)
+    }
+
+    if (response.alertSummary) {
+      printAlertSummary("Weekly alert evaluation", response.alertSummary)
+    }
   }
 }
 
 run().catch((error) => {
-  console.error(error)
+  console.error(JSON.stringify(redactSecrets(error)))
   process.exit(1)
 })

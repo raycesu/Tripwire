@@ -1,10 +1,12 @@
 import type { Asset } from "@/db/schema"
 
+export type AssetType = "crypto" | "stock"
+
 export type AssetDto = {
   id: string
   symbol: string
   name: string
-  assetType: string
+  assetType: AssetType
   providerSymbol: string | null
   providerName: string | null
   quoteAsset: string | null
@@ -18,7 +20,7 @@ export const toAssetDto = (asset: Asset): AssetDto => ({
   id: asset.id,
   symbol: asset.symbol,
   name: asset.name,
-  assetType: asset.assetType,
+  assetType: asset.assetType as AssetType,
   providerSymbol: asset.providerSymbol,
   providerName: asset.providerName,
   quoteAsset: asset.quoteAsset,

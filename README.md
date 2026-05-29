@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Tripwire is a personal asset score machine with scheduled scoring jobs triggered by cron-job.org. See [docs/cron-setup.md](docs/cron-setup.md) for production cron configuration.
+
 ## Getting Started
 
 First, run the development server:

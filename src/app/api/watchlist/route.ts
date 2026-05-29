@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireApiUser } from "@/lib/auth/require-user"
+import { enforceRateLimit } from "@/lib/rate-limit/enforce-rate-limit"
 import { addToWatchlist } from "@/lib/watchlist/mutations"
 import { listUserWatchlist } from "@/lib/watchlist/queries"
 import { addWatchlistBodySchema } from "@/lib/validation/watchlist"
@@ -21,6 +22,12 @@ export const POST = async (request: Request) => {
 
   if (userOrResponse instanceof NextResponse) {
     return userOrResponse
+  }
+
+  const rateLimited = await enforceRateLimit(userOrResponse.id, "watchlist-add")
+
+  if (rateLimited) {
+    return rateLimited
   }
 
   let body: unknown

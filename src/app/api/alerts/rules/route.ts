@@ -4,6 +4,7 @@ import { createAlertRule } from "@/lib/alerts/mutations"
 import { listAlertRulesForUser } from "@/lib/alerts/queries"
 import { toAlertRuleDto } from "@/lib/alerts/types"
 import { requireApiUser } from "@/lib/auth/require-user"
+import { enforceRateLimit } from "@/lib/rate-limit/enforce-rate-limit"
 import { createAlertRuleBodySchema } from "@/lib/validation/alerts"
 
 export const GET = async () => {
@@ -25,6 +26,12 @@ export const POST = async (request: Request) => {
 
   if (userOrResponse instanceof NextResponse) {
     return userOrResponse
+  }
+
+  const rateLimited = await enforceRateLimit(userOrResponse.id, "alerts-create")
+
+  if (rateLimited) {
+    return rateLimited
   }
 
   let body: unknown

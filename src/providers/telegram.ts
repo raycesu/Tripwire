@@ -1,5 +1,7 @@
 import { z } from "zod"
 import { env } from "@/lib/env"
+import { logWarn } from "@/lib/logging/logger"
+import { maskChatId } from "@/lib/logging/redact-secrets"
 
 const telegramOkSchema = z.object({
   ok: z.literal(true),
@@ -91,8 +93,21 @@ export const sendTelegramMessage = async (input: {
     const permanentKind = classifyPermanentFailure(response.status, description)
 
     if (permanentKind) {
+      logWarn({
+        event: "telegram_send_permanent_failure",
+        chatId: maskChatId(input.chatId),
+        status: response.status,
+        description,
+      })
       throw new TelegramSendError(description, "permanent", permanentKind, response.status)
     }
+
+    logWarn({
+      event: "telegram_send_transient_failure",
+      chatId: maskChatId(input.chatId),
+      status: response.status,
+      description,
+    })
 
     throw new TelegramSendError(
       description,

@@ -1,5 +1,6 @@
 import { listDistinctWatchlistAssets } from "@/lib/watchlist/queries"
 import {
+  markStaleSnapshots,
   recomputeComposite,
   resolveValidForDate,
   upsertScoreSnapshot,
@@ -7,6 +8,9 @@ import {
 import { evaluateAlerts } from "@/jobs/evaluate-alerts"
 import { ScoringContext } from "@/jobs/scoring-context"
 import { createJobSummary, type JobRunSummary } from "@/jobs/types"
+import { recordNullReason } from "@/lib/jobs/provider-failure-summary"
+import { logWarn } from "@/lib/logging/logger"
+import { redactString } from "@/lib/logging/redact-secrets"
 import { computeRelativity, resolveBenchmarkSymbol } from "@/scoring/relativity"
 import { computeVolume } from "@/scoring/volume"
 import { getUtcMidnight } from "@/scoring/staleness"
@@ -33,6 +37,7 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
       const benchmarkRsi = await context.getBenchmarkRsi(benchmarkSymbol, assetType)
 
       const relativityResult = await computeRelativity({ asset, benchmarkRsi })
+      recordNullReason(summary, relativityResult)
       const relativityValidForDate = resolveValidForDate(
         "relativity",
         "weekly",
@@ -52,16 +57,25 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
     } catch (error) {
       assetSucceeded = false
       summary.failed += 1
+      const message = error instanceof Error ? error.message : "Unknown error"
+      logWarn({
+        event: "asset_score_failed",
+        jobName: "score-weekly",
+        assetSymbol: asset.symbol,
+        sector: "relativity",
+        message: redactString(message),
+      })
       summary.errors.push({
         assetId: asset.id,
         symbol: asset.symbol,
         sector: "relativity",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: redactString(message),
       })
     }
 
     try {
       const volumeResult = await computeVolume(asset)
+      recordNullReason(summary, volumeResult)
       const volumeValidForDate = resolveValidForDate(
         "volume",
         "weekly",
@@ -81,15 +95,25 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
     } catch (error) {
       assetSucceeded = false
       summary.failed += 1
+      const message = error instanceof Error ? error.message : "Unknown error"
+      logWarn({
+        event: "asset_score_failed",
+        jobName: "score-weekly",
+        assetSymbol: asset.symbol,
+        sector: "volume",
+        message: redactString(message),
+      })
       summary.errors.push({
         assetId: asset.id,
         symbol: asset.symbol,
         sector: "volume",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: redactString(message),
       })
     }
 
     try {
+      await markStaleSnapshots(asset.id)
+
       const compositeSnapshot = await recomputeComposite(asset.id, fallbackValidForDate)
       freshSnapshotIds.push(compositeSnapshot.id)
 
@@ -98,11 +122,19 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
       }
     } catch (error) {
       summary.failed += 1
+      const message = error instanceof Error ? error.message : "Unknown error"
+      logWarn({
+        event: "asset_score_failed",
+        jobName: "score-weekly",
+        assetSymbol: asset.symbol,
+        sector: "composite",
+        message: redactString(message),
+      })
       summary.errors.push({
         assetId: asset.id,
         symbol: asset.symbol,
         sector: "composite",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: redactString(message),
       })
     }
   }

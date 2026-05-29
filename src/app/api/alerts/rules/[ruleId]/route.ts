@@ -3,6 +3,7 @@ import { deleteAlertRule, updateAlertRule } from "@/lib/alerts/mutations"
 import { getAlertRuleForUser } from "@/lib/alerts/queries"
 import { toAlertRuleDto } from "@/lib/alerts/types"
 import { requireApiUser } from "@/lib/auth/require-user"
+import { enforceRateLimit } from "@/lib/rate-limit/enforce-rate-limit"
 import { alertRuleIdParamSchema, updateAlertRuleBodySchema } from "@/lib/validation/alerts"
 
 type RouteContext = {
@@ -14,6 +15,12 @@ export const PATCH = async (request: Request, context: RouteContext) => {
 
   if (userOrResponse instanceof NextResponse) {
     return userOrResponse
+  }
+
+  const rateLimited = await enforceRateLimit(userOrResponse.id, "alerts-mutate")
+
+  if (rateLimited) {
+    return rateLimited
   }
 
   const params = await context.params
@@ -60,6 +67,12 @@ export const DELETE = async (_request: Request, context: RouteContext) => {
 
   if (userOrResponse instanceof NextResponse) {
     return userOrResponse
+  }
+
+  const rateLimited = await enforceRateLimit(userOrResponse.id, "alerts-mutate")
+
+  if (rateLimited) {
+    return rateLimited
   }
 
   const params = await context.params

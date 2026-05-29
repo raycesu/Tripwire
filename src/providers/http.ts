@@ -5,15 +5,39 @@ import { ProviderError } from "@/providers/types"
 type FetchJsonOptions = {
   timeoutMs?: number
   headers?: Record<string, string>
+  maxRetries?: number
 }
 
-export const fetchJson = async <T>(
+const DEFAULT_TIMEOUT_MS = Number(process.env.PROVIDER_FETCH_TIMEOUT_MS) || 15_000
+const DEFAULT_MAX_RETRIES = Number(process.env.PROVIDER_FETCH_MAX_RETRIES) || 3
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const isRetryableStatus = (status: number | undefined): boolean => {
+  if (status === undefined) {
+    return true
+  }
+
+  if (status === 429) {
+    return true
+  }
+
+  return status >= 500
+}
+
+const backoffMs = (attempt: number): number => {
+  const base = 300 * 2 ** attempt
+  const jitter = Math.floor(Math.random() * 100)
+  return base + jitter
+}
+
+const fetchJsonOnce = async <T>(
   url: string,
   schema: z.ZodType<T>,
   provider: ProviderName,
-  options: FetchJsonOptions = {}
+  timeoutMs: number,
+  headers: Record<string, string>
 ): Promise<T> => {
-  const { timeoutMs = 15_000, headers = {} } = options
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -59,4 +83,39 @@ export const fetchJson = async <T>(
   } finally {
     clearTimeout(timeout)
   }
+}
+
+export const fetchJson = async <T>(
+  url: string,
+  schema: z.ZodType<T>,
+  provider: ProviderName,
+  options: FetchJsonOptions = {}
+): Promise<T> => {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES
+  const headers = options.headers ?? {}
+
+  let lastError: ProviderError | null = null
+
+  for (let attempt = 0; attempt < maxRetries; attempt += 1) {
+    try {
+      return await fetchJsonOnce(url, schema, provider, timeoutMs, headers)
+    } catch (error) {
+      if (!(error instanceof ProviderError)) {
+        throw error
+      }
+
+      lastError = error
+
+      const canRetry = attempt < maxRetries - 1 && isRetryableStatus(error.status)
+
+      if (!canRetry) {
+        throw error
+      }
+
+      await sleep(backoffMs(attempt))
+    }
+  }
+
+  throw lastError ?? new ProviderError(provider, "Provider fetch failed")
 }

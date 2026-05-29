@@ -22,6 +22,20 @@
       "when": 1779990730545,
       "tag": "0002_phase5_alerts_telegram",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780024495074,
+      "tag": "0003_mighty_midnight",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780100000000,
+      "tag": "0004_api_rate_limits",
+      "breakpoints": true
     }
   ]
 }

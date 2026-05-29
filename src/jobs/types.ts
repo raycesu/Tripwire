@@ -3,6 +3,7 @@ export type JobRunSummary = {
   succeeded: number
   failed: number
   errors: Array<{ assetId: string; symbol: string; sector: string; message: string }>
+  nullReasonCounts: Record<string, number>
 }
 
 export const createJobSummary = (): JobRunSummary => ({
@@ -10,6 +11,7 @@ export const createJobSummary = (): JobRunSummary => ({
   succeeded: 0,
   failed: 0,
   errors: [],
+  nullReasonCounts: {},
 })
 
 export type AlertRunSummary = {
@@ -31,3 +33,21 @@ export const createAlertRunSummary = (): AlertRunSummary => ({
   skippedNoTelegram: 0,
   errors: [],
 })
+
+export const mergeAlertRunSummaries = (
+  ...summaries: AlertRunSummary[]
+): AlertRunSummary => {
+  const merged = createAlertRunSummary()
+
+  for (const summary of summaries) {
+    merged.sent += summary.sent
+    merged.failed += summary.failed
+    merged.skippedDuplicate += summary.skippedDuplicate
+    merged.skippedRateLimited += summary.skippedRateLimited
+    merged.skippedCooldown += summary.skippedCooldown
+    merged.skippedNoTelegram += summary.skippedNoTelegram
+    merged.errors.push(...summary.errors)
+  }
+
+  return merged
+}

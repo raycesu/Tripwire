@@ -141,6 +141,30 @@ export const scoreSnapshots = pgTable(
   ]
 )
 
+export const apiRateLimits = pgTable("api_rate_limits", {
+  key: varchar("key", { length: 191 }).primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  count: integer("count").notNull().default(0),
+})
+
+export const scheduledJobRuns = pgTable(
+  "scheduled_job_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    jobName: varchar("job_name", { length: 64 }).notNull(),
+    triggeredBy: varchar("triggered_by", { length: 32 }).notNull(),
+    status: varchar("status", { length: 32 }).notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    assetsAttempted: integer("assets_attempted"),
+    assetsSucceeded: integer("assets_succeeded"),
+    assetsFailed: integer("assets_failed"),
+    errorJson: jsonb("error_json"),
+    metadataJson: jsonb("metadata_json"),
+  },
+  (table) => [index("scheduled_job_runs_job_name_started_idx").on(table.jobName, table.startedAt)]
+)
+
 export const alertEvents = pgTable(
   "alert_events",
   {
@@ -249,6 +273,11 @@ export type AlertEvent = typeof alertEvents.$inferSelect
 export type TelegramDeliveryState = typeof telegramDeliveryState.$inferSelect
 export type ScoreSnapshot = typeof scoreSnapshots.$inferSelect
 export type ProviderCache = typeof providerCache.$inferSelect
+export type ScheduledJobRun = typeof scheduledJobRuns.$inferSelect
+
+export type ScheduledJobName = "score-daily" | "score-weekly" | "evaluate-alerts"
+export type ScheduledJobTriggeredBy = "cron-job.org" | "manual" | "admin"
+export type ScheduledJobStatus = "running" | "success" | "partial_failure" | "failed"
 
 export type TelegramDeliveryStatus =
   | "connected"

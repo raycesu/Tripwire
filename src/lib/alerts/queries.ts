@@ -1,11 +1,53 @@
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, or, sql } from "drizzle-orm"
 import { db } from "@/db/client"
 import { alertEvents, alertRules, scoreSnapshots } from "@/db/schema"
-import type { AlertRuleWithAsset } from "@/lib/alerts/types"
+import type { AlertEventDto, AlertRuleWithAsset } from "@/lib/alerts/types"
+import { formatRuleLabel } from "@/lib/alerts/types"
 import type { ScoreSnapshotRecord } from "@/lib/scores/snapshots"
 import { getLatestSectorSnapshots } from "@/lib/scores/snapshots"
 import { getRuleTargetSector } from "@/lib/alerts/evaluation"
 import type { SectorName } from "@/scoring/types"
+
+export const listAlertEventsForUser = async (
+  userId: string,
+  options: { limit?: number } = {}
+): Promise<AlertEventDto[]> => {
+  const limit = options.limit ?? 50
+
+  const rows = await db.query.alertEvents.findMany({
+    where: eq(alertEvents.userId, userId),
+    orderBy: [desc(alertEvents.createdAt)],
+    limit,
+    with: {
+      alertRule: true,
+      asset: {
+        columns: { symbol: true, name: true },
+      },
+    },
+  })
+
+  return rows.map((row) => {
+    const rule = row.alertRule
+
+    return {
+      id: row.id,
+      assetSymbol: row.asset.symbol,
+      assetName: row.asset.name,
+      ruleLabel: formatRuleLabel({
+        scope: (rule.scope as "composite" | "sector") ?? "composite",
+        sector: (rule.sector as import("@/scoring/types").SectorName | null) ?? null,
+        operator: "above",
+        threshold: Number(rule.threshold),
+      }),
+      triggeredValue: Number(row.triggeredValue),
+      message: row.message,
+      telegramStatus: row.telegramStatus,
+      telegramError: row.telegramError,
+      sentAt: row.sentAt,
+      createdAt: row.createdAt,
+    }
+  })
+}
 
 export const countActiveAlertRules = async (userId: string): Promise<number> => {
   const rules = await db.query.alertRules.findMany({
@@ -133,4 +175,63 @@ export const listEnabledRulesForSnapshots = async (
   })
 
   return rows as AlertRuleWithAsset[]
+}
+
+export const listEnabledAlertRules = async (): Promise<AlertRuleWithAsset[]> => {
+  const rows = await db.query.alertRules.findMany({
+    where: eq(alertRules.isEnabled, true),
+    with: {
+      asset: {
+        columns: { symbol: true, name: true },
+      },
+    },
+  })
+
+  return rows as AlertRuleWithAsset[]
+}
+
+export type RetryableAlertEventRow = {
+  id: string
+  alertRuleId: string
+  userId: string
+  message: string
+  telegramStatus: string
+  rule: AlertRuleWithAsset
+}
+
+export const listRetryableAlertEvents = async (input: {
+  since: Date
+  limit: number
+}): Promise<RetryableAlertEventRow[]> => {
+  const rows = await db.query.alertEvents.findMany({
+    where: and(
+      or(
+        eq(alertEvents.telegramStatus, "failed"),
+        eq(alertEvents.telegramStatus, "skipped_rate_limited")
+      ),
+      gte(alertEvents.createdAt, input.since)
+    ),
+    orderBy: [desc(alertEvents.createdAt)],
+    limit: input.limit,
+    with: {
+      alertRule: {
+        with: {
+          asset: {
+            columns: { symbol: true, name: true },
+          },
+        },
+      },
+    },
+  })
+
+  return rows
+    .filter((row) => row.alertRule?.isEnabled)
+    .map((row) => ({
+      id: row.id,
+      alertRuleId: row.alertRuleId,
+      userId: row.userId,
+      message: row.message,
+      telegramStatus: row.telegramStatus,
+      rule: row.alertRule as AlertRuleWithAsset,
+    }))
 }

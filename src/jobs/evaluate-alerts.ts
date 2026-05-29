@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm"
 import { db } from "@/db/client"
 import { alertEvents } from "@/db/schema"
 import {
@@ -14,7 +15,9 @@ import {
   getLatestSnapshotForRule,
   getSnapshotsByIds,
   hasAlertEventForSnapshot,
+  listEnabledAlertRules,
   listEnabledRulesForSnapshots,
+  listRetryableAlertEvents,
 } from "@/lib/alerts/queries"
 import type { AlertRuleWithAsset } from "@/lib/alerts/types"
 import { env } from "@/lib/env"
@@ -22,7 +25,11 @@ import { getLatestSectorSnapshots, type ScoreSnapshotRecord } from "@/lib/scores
 import { markTelegramDisconnected } from "@/lib/telegram/link-chat"
 import { getUserTelegramChatId } from "@/lib/telegram/queries"
 import { sendTelegramMessage, TelegramSendError } from "@/providers/telegram"
-import { createAlertRunSummary, type AlertRunSummary } from "@/jobs/types"
+import {
+  createAlertRunSummary,
+  mergeAlertRunSummaries,
+  type AlertRunSummary,
+} from "@/jobs/types"
 
 type AlertCandidate = {
   rule: AlertRuleWithAsset
@@ -304,4 +311,111 @@ export const evaluateInitialMatchForUser = async (
   }
 
   return evaluateInitialMatch(ruleId)
+}
+
+export const collectUnsentMatchingSnapshotIds = async (): Promise<string[]> => {
+  const rules = await listEnabledAlertRules()
+  const snapshotIds: string[] = []
+
+  for (const rule of rules) {
+    const snapshot = await getLatestSnapshotForRule(rule)
+
+    if (!snapshot || !doesRuleMatchSnapshot(rule, snapshot)) {
+      continue
+    }
+
+    if (await hasAlertEventForSnapshot(rule.id, snapshot.id)) {
+      continue
+    }
+
+    snapshotIds.push(snapshot.id)
+  }
+
+  return [...new Set(snapshotIds)]
+}
+
+const retryFailedAlertDeliveries = async (): Promise<AlertRunSummary> => {
+  const summary = createAlertRunSummary()
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000)
+  const retryableEvents = await listRetryableAlertEvents({ since, limit: 100 })
+
+  const globalSentCount = await countGlobalSentAlertsInLastMinute()
+  const globalSentRemaining = {
+    value: Math.max(0, env.MAX_TELEGRAM_MESSAGES_PER_MINUTE - globalSentCount),
+  }
+  const userSentCounts = new Map<string, number>()
+
+  for (const event of retryableEvents) {
+    const chatId = await getUserTelegramChatId(event.userId)
+
+    if (!chatId) {
+      summary.skippedNoTelegram += 1
+      continue
+    }
+
+    const userSent = userSentCounts.get(event.userId) ?? 0
+
+    if (userSent >= env.MAX_ALERTS_PER_USER_PER_RUN) {
+      summary.skippedRateLimited += 1
+      continue
+    }
+
+    if (globalSentRemaining.value <= 0) {
+      summary.skippedRateLimited += 1
+      continue
+    }
+
+    const now = new Date()
+
+    try {
+      await sendTelegramMessage({ chatId, text: event.message })
+
+      await db
+        .update(alertEvents)
+        .set({
+          telegramStatus: "sent",
+          telegramError: null,
+          sentAt: now,
+        })
+        .where(eq(alertEvents.id, event.id))
+
+      userSentCounts.set(event.userId, userSent + 1)
+      globalSentRemaining.value -= 1
+      summary.sent += 1
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+      await db
+        .update(alertEvents)
+        .set({
+          telegramStatus: "failed",
+          telegramError: errorMessage,
+        })
+        .where(eq(alertEvents.id, event.id))
+
+      summary.failed += 1
+      summary.errors.push({
+        ruleId: event.alertRuleId,
+        assetSymbol: event.rule.asset.symbol,
+        message: errorMessage,
+      })
+
+      if (error instanceof TelegramSendError && error.kind === "permanent") {
+        const status = error.permanentKind === "blocked" ? "blocked" : "invalid_chat"
+        await markTelegramDisconnected(event.userId, status, errorMessage)
+      }
+    }
+  }
+
+  return summary
+}
+
+export const runEvaluateAlertsRetry = async (): Promise<{ alertSummary: AlertRunSummary }> => {
+  const catchUpIds = await collectUnsentMatchingSnapshotIds()
+  const catchUpSummary = await evaluateAlerts({ freshSnapshotIds: catchUpIds })
+  const retrySummary = await retryFailedAlertDeliveries()
+
+  return {
+    alertSummary: mergeAlertRunSummaries(catchUpSummary, retrySummary),
+  }
 }

@@ -1,17 +1,30 @@
 import Link from "next/link"
 import { Bell, Radar } from "lucide-react"
+import { WatchlistScoresTable } from "@/components/dashboard/watchlist-scores-table"
+import { EmptyState } from "@/components/ui/empty-state"
 import { ButtonLink } from "@/components/ui/button"
-import { AssetResolutionBadge } from "@/components/assets/asset-resolution-badge"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
 import { countActiveAlertRules } from "@/lib/alerts/queries"
+import { getLatestSnapshotsForAssets } from "@/lib/scores/queries"
+import { ScoringRunsSummary } from "@/components/dashboard/scoring-runs-summary"
+import { getLastJobRun } from "@/lib/jobs/queries"
 import { listUserWatchlist } from "@/lib/watchlist/queries"
 
 export default async function DashboardPage() {
   const user = await ensureDbUser()
-  const [watchlist, activeAlertCount] = await Promise.all([
+  const [watchlist, activeAlertCount, lastDailyJob, lastWeeklyJob] = await Promise.all([
     listUserWatchlist(user.id),
     countActiveAlertRules(user.id),
+    getLastJobRun("score-daily"),
+    getLastJobRun("score-weekly"),
   ])
+
+  const assetIds = watchlist.map((entry) => entry.assetId)
+  const snapshotsByAssetId = await getLatestSnapshotsForAssets(assetIds)
+
+  const hasAnyScores = [...snapshotsByAssetId.values()].some(
+    (summary) => summary.composite !== null || summary.macro !== null
+  )
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
@@ -26,7 +39,8 @@ export default async function DashboardPage() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          Monitor your watchlist. Scores appear after the scoring engine runs in a later phase.
+          Monitor composite and sector scores for your watchlist. Positive scores signal
+          contrarian opportunity, not generic bullishness.
         </p>
       </section>
 
@@ -39,10 +53,7 @@ export default async function DashboardPage() {
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Active alerts</p>
           <p className="mt-2 text-2xl font-semibold">{activeAlertCount}</p>
         </article>
-        <article className="rounded-xl border border-border bg-card p-5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Status</p>
-          <p className="mt-2 text-sm font-medium text-foreground">Awaiting first score run</p>
-        </article>
+        <ScoringRunsSummary lastDailyJob={lastDailyJob} lastWeeklyJob={lastWeeklyJob} />
       </section>
 
       <section className="rounded-xl border border-border bg-card p-6">
@@ -59,40 +70,22 @@ export default async function DashboardPage() {
         </div>
 
         {watchlist.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              No assets on your watchlist yet. Add BTC, ETH, SOL, and other MVP assets from the
-              catalog.
-            </p>
-            <div className="mt-4">
-              <ButtonLink href="/assets">Go to asset catalog</ButtonLink>
-            </div>
-          </div>
+          <EmptyState
+            title="No assets on your watchlist"
+            description="Add BTC, ETH, SOL, and other MVP assets from the catalog to start monitoring scores."
+            actionHref="/assets"
+            actionLabel="Go to asset catalog"
+          />
         ) : (
-          <ul className="divide-y divide-border">
-            {watchlist.map((entry) => (
-              <li key={entry.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
-                <div>
-                  <Link
-                    href={`/assets/${entry.asset.symbol}`}
-                    className="font-medium text-foreground hover:underline"
-                  >
-                    {entry.asset.symbol}
-                  </Link>
-                  <p className="text-sm text-muted-foreground">{entry.asset.name}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <AssetResolutionBadge
-                    resolutionStatus={entry.asset.resolutionStatus}
-                    unsupportedReason={entry.asset.unsupportedReason}
-                  />
-                  <span className="text-xs text-muted-foreground capitalize">
-                    {entry.asset.assetType}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <>
+            {!hasAnyScores ? (
+              <p className="mb-4 text-sm text-muted-foreground">
+                Scores will appear after the daily or weekly cron jobs run, or after a manual{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">npm run scores:run</code>.
+              </p>
+            ) : null}
+            <WatchlistScoresTable watchlist={watchlist} snapshotsByAssetId={snapshotsByAssetId} />
+          </>
         )}
       </section>
     </main>
