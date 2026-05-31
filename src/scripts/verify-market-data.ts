@@ -66,6 +66,7 @@ const run = async () => {
         providerName: "twelve_data",
         quoteAsset: null,
         benchmarkSymbol: null,
+        exchange: null,
         resolutionStatus: "resolved",
         unsupportedReason: null,
         isActive: true,

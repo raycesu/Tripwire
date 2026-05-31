@@ -33,6 +33,7 @@ export const getCatalogEntryBySymbol = async (
     name: row.name,
     assetType: row.assetType as AssetType,
     source: row.source,
+    exchange: row.exchange,
   }
 }
 
@@ -58,6 +59,7 @@ export const searchAssetCatalog = async (input: {
       name: assetCatalog.name,
       assetType: assetCatalog.assetType,
       source: assetCatalog.source,
+      exchange: assetCatalog.exchange,
     })
     .from(assetCatalog)
     .where(
@@ -80,6 +82,7 @@ export const searchAssetCatalog = async (input: {
       name: row.name,
       assetType: row.assetType as AssetType,
       source: row.source,
+      exchange: row.exchange,
     }
     const key = `${result.symbol}:${result.assetType}`
     unique.set(key, result)

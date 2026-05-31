@@ -69,6 +69,12 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
             <dt className="text-xs uppercase tracking-wider text-muted-foreground">Benchmark</dt>
             <dd className="mt-1 text-sm font-medium">{asset.benchmarkSymbol ?? "—"}</dd>
           </div>
+          {asset.assetType === "stock" ? (
+            <div>
+              <dt className="text-xs uppercase tracking-wider text-muted-foreground">Exchange</dt>
+              <dd className="mt-1 text-sm font-medium">{asset.exchange ?? "—"}</dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-xs uppercase tracking-wider text-muted-foreground">
               Provider symbol

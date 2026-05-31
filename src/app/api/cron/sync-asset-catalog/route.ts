@@ -35,6 +35,8 @@ export const POST = async (request: Request) => {
       cryptoCount: summary.cryptoCount,
       stockCount: summary.stockCount,
       totalUpserted: summary.totalUpserted,
+      prunedCatalogCount: summary.prunedCatalogCount,
+      prunedAssetCount: summary.prunedAssetCount,
     })
 
     await finishScheduledJobRun({

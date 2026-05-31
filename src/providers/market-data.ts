@@ -9,6 +9,7 @@ type FetchableAsset = {
   assetType: string
   providerName: string | null
   providerSymbol: string | null
+  exchange: string | null
   resolutionStatus: string
   symbol: string
 }
@@ -46,7 +47,9 @@ export const fetchWeeklyOhlcv = async (
   }
 
   if (asset.providerName === "twelve_data") {
-    return twelveData.fetchWeeklyOhlcv(asset.providerSymbol, minCount)
+    return twelveData.fetchWeeklyOhlcv(asset.providerSymbol, minCount, {
+      exchange: asset.exchange,
+    })
   }
 
   if (asset.providerName === "binance_global" || asset.providerName === "binance_us") {
@@ -63,10 +66,11 @@ export const fetchWeeklyOhlcv = async (
 export const fetchWeeklyOhlcvForSymbol = async (
   symbol: string,
   assetType: "crypto" | "stock",
-  minCount = VOLUME_CANDLE_COUNT
+  minCount = VOLUME_CANDLE_COUNT,
+  exchange?: string | null
 ): Promise<WeeklyOhlcvResult> => {
   if (assetType === "stock") {
-    return twelveData.fetchWeeklyOhlcv(symbol, minCount)
+    return twelveData.fetchWeeklyOhlcv(symbol, minCount, { exchange })
   }
 
   const providerSymbol = `${symbol.toUpperCase()}USDT`

@@ -1,4 +1,9 @@
 import { z } from "zod"
+import {
+  getAllowlistEntryByMicCode,
+  STOCK_EXCHANGE_ALLOWLIST,
+} from "@/lib/assets/stock-exchange-allowlist"
+import { mergeStockCatalogEntries } from "@/lib/assets/merge-stock-catalog"
 import { env } from "@/lib/env"
 import { fetchJson } from "@/providers/http"
 import { getOrFetch } from "@/providers/provider-cache"
@@ -6,7 +11,7 @@ import type { ProviderName } from "@/providers/types"
 
 const PROVIDER: ProviderName = "twelve_data"
 const BASE_URL = "https://api.twelvedata.com"
-const STOCKS_CACHE_KEY = "twelve_data:stocks_list"
+const STOCKS_CACHE_KEY = "twelve_data:stocks_list:us_exchanges_v2"
 const STOCKS_CACHE_TTL_SECONDS = 86_400
 
 const stocksListSchema = z.object({
@@ -31,6 +36,15 @@ export type StockCatalogEntry = {
   assetType: "stock"
   source: "twelve_data"
   providerSymbol: string
+  exchange: string
+  micCode: string
+}
+
+type RawStockRow = {
+  symbol: string
+  name: string
+  type?: string
+  exchange?: string
 }
 
 const isCommonStock = (type: string | undefined): boolean => {
@@ -42,25 +56,39 @@ const isCommonStock = (type: string | undefined): boolean => {
   return normalized.includes("common stock") || normalized === "stock"
 }
 
-const mapStockEntry = (entry: {
-  symbol: string
-  name: string
-}): StockCatalogEntry => ({
+const mapStockEntry = (
+  entry: RawStockRow,
+  allowlistEntry: { micCode: string; exchangeName: string }
+): StockCatalogEntry => ({
   symbol: entry.symbol.toUpperCase(),
   name: entry.name,
   assetType: "stock",
   source: "twelve_data",
   providerSymbol: entry.symbol.toUpperCase(),
+  exchange: entry.exchange?.toUpperCase() ?? allowlistEntry.exchangeName,
+  micCode: allowlistEntry.micCode,
 })
 
-export const fetchStocksListRaw = async (): Promise<StockCatalogEntry[]> => {
+const fetchStocksForMic = async (micCode: string): Promise<StockCatalogEntry[]> => {
+  const allowlistEntry = getAllowlistEntryByMicCode(micCode)
+
+  if (!allowlistEntry) {
+    return []
+  }
+
   const url = new URL(`${BASE_URL}/stocks`)
   url.searchParams.set("apikey", env.TWELVE_DATA_API_KEY)
+  url.searchParams.set("exchange", allowlistEntry.exchangeName)
+  url.searchParams.set("type", "Common Stock")
 
   const data = await fetchJson(url.toString(), stocksListSchema, PROVIDER)
 
   if (!data.data || data.data.length === 0) {
-    throw new Error(data.message ?? "No stocks returned from Twelve Data")
+    if (data.message) {
+      throw new Error(`Twelve Data stocks fetch failed for ${allowlistEntry.label}: ${data.message}`)
+    }
+
+    return []
   }
 
   const seen = new Set<string>()
@@ -78,10 +106,18 @@ export const fetchStocksListRaw = async (): Promise<StockCatalogEntry[]> => {
     }
 
     seen.add(symbol)
-    entries.push(mapStockEntry(row))
+    entries.push(mapStockEntry(row, allowlistEntry))
   }
 
-  return entries.sort((left, right) => left.symbol.localeCompare(right.symbol))
+  return entries
+}
+
+export const fetchStocksListRaw = async (): Promise<StockCatalogEntry[]> => {
+  const entriesByExchange = await Promise.all(
+    STOCK_EXCHANGE_ALLOWLIST.map((entry) => fetchStocksForMic(entry.micCode))
+  )
+
+  return mergeStockCatalogEntries(entriesByExchange)
 }
 
 export const listStockCatalogEntries = async (): Promise<StockCatalogEntry[]> =>

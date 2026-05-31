@@ -63,8 +63,8 @@ export default async function AssetsPage() {
       <section>
         <h1 className="text-2xl font-semibold text-foreground">Asset catalog</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Search Binance USDT spot pairs and Twelve Data equities. Open an asset to review scores
-          and add it to your watchlist.
+          Search Binance USDT spot pairs and US-listed stocks (NYSE, NASDAQ, BATS). Open an asset to
+          review scores and add it to your watchlist.
         </p>
       </section>
 

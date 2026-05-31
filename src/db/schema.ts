@@ -33,6 +33,7 @@ export const assetCatalog = pgTable(
     assetType: varchar("asset_type", { length: 16 }).notNull(),
     source: varchar("source", { length: 32 }).notNull(),
     providerSymbol: varchar("provider_symbol", { length: 64 }),
+    exchange: varchar("exchange", { length: 32 }),
     syncedAt: timestamp("synced_at", { withTimezone: true }).notNull(),
   },
   (table) => [
@@ -53,6 +54,7 @@ export const assets = pgTable(
     providerName: varchar("provider_name", { length: 64 }),
     quoteAsset: varchar("quote_asset", { length: 16 }),
     benchmarkSymbol: varchar("benchmark_symbol", { length: 32 }),
+    exchange: varchar("exchange", { length: 32 }),
     resolutionStatus: varchar("resolution_status", { length: 32 }).notNull().default("needs_review"),
     unsupportedReason: text("unsupported_reason"),
     isActive: boolean("is_active").notNull().default(true),

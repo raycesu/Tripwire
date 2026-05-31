@@ -35,6 +35,11 @@ type TwelveDataBar = {
   volume?: string
 }
 
+export type TwelveDataTimeSeriesOptions = {
+  exchange?: string | null
+  micCode?: string | null
+}
+
 const mapValueToCandle = (value: TwelveDataBar): WeeklyOhlcvCandle => {
   const openTime = new Date(value.datetime)
   const closeTime = new Date(openTime.getTime() + 6 * 24 * 60 * 60 * 1000)
@@ -52,13 +57,20 @@ const mapValueToCandle = (value: TwelveDataBar): WeeklyOhlcvCandle => {
 
 export const getWeeklyTimeSeriesRaw = async (
   symbol: string,
-  outputSize: number
+  outputSize: number,
+  options?: TwelveDataTimeSeriesOptions
 ): Promise<WeeklyOhlcvCandle[]> => {
   const url = new URL(`${BASE_URL}/time_series`)
   url.searchParams.set("symbol", symbol)
   url.searchParams.set("interval", "1week")
   url.searchParams.set("outputsize", String(outputSize + 1))
   url.searchParams.set("apikey", env.TWELVE_DATA_API_KEY)
+
+  if (options?.exchange) {
+    url.searchParams.set("exchange", options.exchange)
+  } else if (options?.micCode) {
+    url.searchParams.set("mic_code", options.micCode)
+  }
 
   const data = await fetchJson(url.toString(), timeSeriesSchema, PROVIDER)
 
@@ -74,10 +86,11 @@ export const getWeeklyTimeSeriesRaw = async (
 
 export const fetchWeeklyOhlcv = async (
   providerSymbol: string,
-  minCount = VOLUME_CANDLE_COUNT
+  minCount = VOLUME_CANDLE_COUNT,
+  options?: TwelveDataTimeSeriesOptions
 ): Promise<WeeklyOhlcvResult> => {
   try {
-    const raw = await getWeeklyTimeSeriesRaw(providerSymbol, minCount)
+    const raw = await getWeeklyTimeSeriesRaw(providerSymbol, minCount, options)
     const normalized = normalizeWeeklyOhlcvCandles(raw, {
       excludeInProgress: true,
       minCount,
@@ -101,6 +114,8 @@ export const fetchWeeklyOhlcv = async (
         fetchedAt: new Date().toISOString(),
         candleCount: normalized.candles.length,
         interval: "1w",
+        exchange: options?.exchange ?? undefined,
+        micCode: options?.micCode ?? undefined,
       },
     }
   } catch (error) {

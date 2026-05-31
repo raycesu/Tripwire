@@ -51,6 +51,7 @@ export const ensureAsset = async (symbol: string): Promise<AssetDto | null> => {
       providerSymbol: catalogEntry.assetType === "stock" ? catalogEntry.symbol : null,
       providerName: catalogEntry.assetType === "stock" ? "twelve_data" : null,
       quoteAsset: catalogEntry.assetType === "crypto" ? "USDT" : null,
+      exchange: catalogEntry.assetType === "stock" ? catalogEntry.exchange : null,
       benchmarkSymbol,
       resolutionStatus: "needs_review",
       isActive: true,

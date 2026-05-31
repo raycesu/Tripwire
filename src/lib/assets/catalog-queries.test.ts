@@ -8,18 +8,21 @@ describe("rankCatalogSearchResult", () => {
       name: "Ethereum",
       assetType: "crypto",
       source: "binance_global",
+      exchange: null,
     })
     const prefix = rankCatalogSearchResult("ETH", {
       symbol: "ETHW",
       name: "EthereumPoW",
       assetType: "crypto",
       source: "binance_global",
+      exchange: null,
     })
     const name = rankCatalogSearchResult("ETH", {
       symbol: "WETH",
       name: "Wrapped Ethereum",
       assetType: "crypto",
       source: "binance_global",
+      exchange: null,
     })
 
     expect(exact).toBeLessThan(prefix)

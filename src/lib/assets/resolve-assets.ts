@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm"
 import { db } from "@/db/client"
 import { assets } from "@/db/schema"
+import { getCatalogEntryBySymbol } from "@/lib/assets/catalog-queries"
 import { resolveCryptoSymbol } from "@/providers/crypto-resolver"
 
 export type ResolveAssetResult = {
@@ -77,12 +78,14 @@ export const resolveStockAssetBySymbol = async (
   }
 
   const now = new Date()
+  const catalogEntry = await getCatalogEntryBySymbol(row.symbol, "stock")
 
   await db
     .update(assets)
     .set({
       providerName: "twelve_data",
       providerSymbol: row.symbol,
+      exchange: catalogEntry?.exchange ?? row.exchange,
       resolutionStatus: "resolved",
       unsupportedReason: null,
       updatedAt: now,

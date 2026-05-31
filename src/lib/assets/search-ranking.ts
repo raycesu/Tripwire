@@ -5,6 +5,7 @@ export type CatalogSearchResult = {
   name: string
   assetType: AssetType
   source: string
+  exchange: string | null
 }
 
 export const rankCatalogSearchResult = (

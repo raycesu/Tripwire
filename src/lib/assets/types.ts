@@ -11,6 +11,7 @@ export type AssetDto = {
   providerName: string | null
   quoteAsset: string | null
   benchmarkSymbol: string | null
+  exchange: string | null
   resolutionStatus: string
   unsupportedReason: string | null
   isActive: boolean
@@ -25,6 +26,7 @@ export const toAssetDto = (asset: Asset): AssetDto => ({
   providerName: asset.providerName,
   quoteAsset: asset.quoteAsset,
   benchmarkSymbol: asset.benchmarkSymbol,
+  exchange: asset.exchange,
   resolutionStatus: asset.resolutionStatus,
   unsupportedReason: asset.unsupportedReason,
   isActive: asset.isActive,

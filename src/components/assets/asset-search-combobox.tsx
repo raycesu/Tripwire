@@ -12,6 +12,7 @@ type AssetSearchResult = {
   name: string
   assetType: AssetType
   source: string
+  exchange: string | null
 }
 
 type AssetTypeFilter = "all" | AssetType
@@ -293,9 +294,14 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
                           {result.name}
                         </span>
                       </span>
-                      <Badge variant="default" className="capitalize">
-                        {result.assetType}
-                      </Badge>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {result.assetType === "stock" && result.exchange ? (
+                          <Badge variant="default">{result.exchange}</Badge>
+                        ) : null}
+                        <Badge variant="default" className="capitalize">
+                          {result.assetType}
+                        </Badge>
+                      </span>
                     </button>
                   </li>
                 ))

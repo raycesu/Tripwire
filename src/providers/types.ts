@@ -28,6 +28,8 @@ export type SourceMetadata = {
   fetchedAt: string
   candleCount: number
   interval: "1w"
+  exchange?: string
+  micCode?: string
 }
 
 export type WeeklyOhlcvSuccess = {
