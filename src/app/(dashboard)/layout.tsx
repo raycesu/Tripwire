@@ -13,7 +13,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-card/70 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-6">
+        <div className="mx-auto flex h-28 w-full max-w-6xl items-center justify-between gap-4 px-6">
           <div className="flex items-center gap-8">
             <TripwireLogo />
             <DashboardNav />

@@ -1,0 +1,43 @@
+---
+description: Avoid Playwright visual inspection on Clerk-protected routes without an active session
+alwaysApply: true
+---
+
+# Auth-Aware Visual Verification
+
+This project uses Clerk. Agent Playwright sessions start unsigned-in, so protected routes redirect or block before UI can be inspected.
+
+## Do Not Use Playwright For Protected UI
+
+- Do not use Playwright (or browser automation) to visually verify work on auth-required pages unless the user explicitly provides a signed-in session, storage state, or asks to debug auth.
+- Do not retry Playwright navigation on protected routes hoping access will appear.
+
+Protected routes (see `src/middleware.ts`):
+
+- `/dashboard` and nested paths
+- `/assets` and `/assets/[symbol]`
+- `/alerts`
+- `/settings`
+- Clerk sign-in / sign-up flows tied to those areas
+
+## Allowed Playwright Use
+
+- Public pages such as the marketing home page (`/`) when a quick visual check helps.
+- Explicit user request to debug auth, sign-in, or session setup with provided credentials or state.
+
+## How To Verify Protected UI Instead
+
+Prefer:
+
+- Code review of components, layouts, and data loaders
+- `npm run lint` and `npm run typecheck` (or project equivalents)
+- Component-level reasoning against Tripwire UI rules (scores, stale/null badges, labels)
+
+In the final response for protected UI work, state clearly that live visual inspection of protected routes was skipped because Clerk blocks unsigned agent sessions.
+
+## When Visual Verification Is Essential
+
+Ask the user to either:
+
+- Inspect the change in their signed-in browser, or
+- Provide a Playwright storage state / session path or other setup the agent can reuse
