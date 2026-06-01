@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm"
 import { db } from "@/db/client"
 import { assets } from "@/db/schema"
 import { resolveBenchmarkSymbol } from "@/lib/assets/benchmark"

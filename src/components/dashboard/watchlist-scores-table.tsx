@@ -1,8 +1,7 @@
 import Link from "next/link"
-import { AssetResolutionBadge } from "@/components/assets/asset-resolution-badge"
+import { WatchlistRemoveButton } from "@/components/dashboard/watchlist-remove-button"
 import { SectorMiniIndicator } from "@/components/scores/sector-mini-indicator"
 import { ScoreChip } from "@/components/scores/score-chip"
-import { formatComputedAt } from "@/lib/scores/labels"
 import type { AssetSnapshotsSummary } from "@/lib/scores/types"
 import type { WatchlistEntryDto } from "@/lib/watchlist/types"
 
@@ -47,18 +46,9 @@ export const WatchlistScoresTable = ({
                 <SectorMiniIndicator label="Relativity" snapshot={summary?.relativity ?? null} />
                 <SectorMiniIndicator label="Volume" snapshot={summary?.volume ?? null} />
               </div>
-
-              <AssetResolutionBadge
-                resolutionStatus={entry.asset.resolutionStatus}
-                unsupportedReason={entry.asset.unsupportedReason}
-              />
-
-              <span className="text-xs text-muted-foreground">
-                {summary?.lastComputedAt
-                  ? formatComputedAt(summary.lastComputedAt)
-                  : "Not computed"}
-              </span>
             </div>
+
+            <WatchlistRemoveButton assetId={entry.assetId} symbol={entry.asset.symbol} />
           </li>
         )
       })}

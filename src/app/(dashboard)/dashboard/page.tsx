@@ -1,23 +1,14 @@
-import Link from "next/link"
 import { Bell, Radar } from "lucide-react"
+import { AssetSearchCombobox } from "@/components/assets/asset-search-combobox"
 import { WatchlistScoresTable } from "@/components/dashboard/watchlist-scores-table"
 import { EmptyState } from "@/components/ui/empty-state"
-import { ButtonLink } from "@/components/ui/button"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
-import { countActiveAlertRules } from "@/lib/alerts/queries"
 import { getLatestSnapshotsForAssets } from "@/lib/scores/queries"
-import { ScoringRunsSummary } from "@/components/dashboard/scoring-runs-summary"
-import { getLastJobRun } from "@/lib/jobs/queries"
 import { listUserWatchlist } from "@/lib/watchlist/queries"
 
 export default async function DashboardPage() {
   const user = await ensureDbUser()
-  const [watchlist, activeAlertCount, lastDailyJob, lastWeeklyJob] = await Promise.all([
-    listUserWatchlist(user.id),
-    countActiveAlertRules(user.id),
-    getLastJobRun("score-daily"),
-    getLastJobRun("score-weekly"),
-  ])
+  const watchlist = await listUserWatchlist(user.id)
 
   const assetIds = watchlist.map((entry) => entry.assetId)
   const snapshotsByAssetId = await getLatestSnapshotsForAssets(assetIds)
@@ -44,16 +35,15 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <article className="rounded-xl border border-border bg-card p-5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Watchlist</p>
-          <p className="mt-2 text-2xl font-semibold">{watchlist.length}</p>
-        </article>
-        <article className="rounded-xl border border-border bg-card p-5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Active alerts</p>
-          <p className="mt-2 text-2xl font-semibold">{activeAlertCount}</p>
-        </article>
-        <ScoringRunsSummary lastDailyJob={lastDailyJob} lastWeeklyJob={lastWeeklyJob} />
+      <section className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Add assets
+        </h2>
+        <AssetSearchCombobox />
+        <p className="mt-3 text-xs text-muted-foreground">
+          Type at least two characters. Select a result to open its detail page and add it to your
+          watchlist.
+        </p>
       </section>
 
       <section className="rounded-xl border border-border bg-card p-6">
@@ -64,17 +54,12 @@ export default async function DashboardPage() {
               Your watchlist
             </h2>
           </div>
-          <ButtonLink href="/assets" variant="secondary">
-            Browse assets
-          </ButtonLink>
         </div>
 
         {watchlist.length === 0 ? (
           <EmptyState
             title="No assets on your watchlist"
-            description="Search crypto and stock tickers on the asset catalog, open a symbol, then add it to your watchlist."
-            actionHref="/assets"
-            actionLabel="Search assets"
+            description="Use the add assets search above, open a symbol, then add it to your watchlist."
           />
         ) : (
           <>

@@ -55,10 +55,6 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
     const trimmed = query.trim()
 
     if (trimmed.length < 2) {
-      setResults([])
-      setIsLoading(false)
-      setErrorMessage(null)
-      setActiveIndex(-1)
       return
     }
 
@@ -116,8 +112,17 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
   }, [])
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(event.target.value)
+    const nextQuery = event.target.value
+
+    setQuery(nextQuery)
     setIsOpen(true)
+
+    if (nextQuery.trim().length < 2) {
+      setResults([])
+      setIsLoading(false)
+      setErrorMessage(null)
+      setActiveIndex(-1)
+    }
   }
 
   const handleInputFocus = () => {

@@ -39,8 +39,8 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
       <div>
-        <Link href="/assets" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to catalog
+        <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back to dashboard
         </Link>
       </div>
 

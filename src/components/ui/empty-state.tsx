@@ -1,4 +1,3 @@
-import Link from "next/link"
 import type { LucideIcon } from "lucide-react"
 import { Inbox } from "lucide-react"
 import { ButtonLink } from "@/components/ui/button"

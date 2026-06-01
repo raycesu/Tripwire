@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/assets", label: "Assets" },
   { href: "/alerts", label: "Alerts" },
   { href: "/settings", label: "Settings" },
 ] as const
