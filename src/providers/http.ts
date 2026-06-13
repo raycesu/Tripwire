@@ -6,6 +6,7 @@ type FetchJsonOptions = {
   timeoutMs?: number
   headers?: Record<string, string>
   maxRetries?: number
+  isRetryableStatus?: (status: number | undefined) => boolean
 }
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.PROVIDER_FETCH_TIMEOUT_MS) || 15_000
@@ -13,7 +14,7 @@ const DEFAULT_MAX_RETRIES = Number(process.env.PROVIDER_FETCH_MAX_RETRIES) || 3
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const isRetryableStatus = (status: number | undefined): boolean => {
+const defaultIsRetryableStatus = (status: number | undefined): boolean => {
   if (status === undefined) {
     return true
   }
@@ -23,6 +24,26 @@ const isRetryableStatus = (status: number | undefined): boolean => {
   }
 
   return status >= 500
+}
+
+const parseRetryAfterMs = (headerValue: string | null): number | undefined => {
+  if (!headerValue) {
+    return undefined
+  }
+
+  const seconds = Number(headerValue)
+
+  if (!Number.isNaN(seconds)) {
+    return Math.max(0, seconds * 1000)
+  }
+
+  const retryAt = Date.parse(headerValue)
+
+  if (!Number.isNaN(retryAt)) {
+    return Math.max(0, retryAt - Date.now())
+  }
+
+  return undefined
 }
 
 const backoffMs = (attempt: number): number => {
@@ -52,10 +73,14 @@ const fetchJsonOnce = async <T>(
     })
 
     if (!response.ok) {
+      const retryAfterMs =
+        response.status === 429 ? parseRetryAfterMs(response.headers.get("Retry-After")) : undefined
+
       throw new ProviderError(
         provider,
         `HTTP ${response.status} for ${url}`,
-        response.status
+        response.status,
+        retryAfterMs
       )
     }
 
@@ -94,6 +119,7 @@ export const fetchJson = async <T>(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES
   const headers = options.headers ?? {}
+  const isRetryableStatus = options.isRetryableStatus ?? defaultIsRetryableStatus
 
   let lastError: ProviderError | null = null
 

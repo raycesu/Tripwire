@@ -1,6 +1,7 @@
 export type ProviderName =
   | "binance_global"
   | "binance_us"
+  | "kraken"
   | "twelve_data"
   | "fred"
   | "alternative_me"
@@ -49,7 +50,7 @@ export type WeeklyOhlcvResult = WeeklyOhlcvSuccess | WeeklyOhlcvFailure
 
 export type CryptoResolutionSuccess = {
   ok: true
-  providerName: "binance_global" | "binance_us"
+  providerName: "binance_us" | "kraken"
   providerSymbol: string
   quoteAsset: "USDT"
 }
@@ -96,11 +97,18 @@ export type FredSeriesResult = FredSeriesSuccess | FredSeriesFailure
 export class ProviderError extends Error {
   readonly provider: ProviderName
   readonly status?: number
+  readonly retryAfterMs?: number
 
-  constructor(provider: ProviderName, message: string, status?: number) {
+  constructor(
+    provider: ProviderName,
+    message: string,
+    status?: number,
+    retryAfterMs?: number
+  ) {
     super(message)
     this.name = "ProviderError"
     this.provider = provider
     this.status = status
+    this.retryAfterMs = retryAfterMs
   }
 }

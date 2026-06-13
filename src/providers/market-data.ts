@@ -1,6 +1,7 @@
 import type { AssetDto } from "@/lib/assets/types"
-import * as binanceGlobal from "@/providers/binance"
 import * as binanceUs from "@/providers/binance-us"
+import { buildUsdtPairSymbol } from "@/providers/crypto-resolver"
+import * as kraken from "@/providers/kraken"
 import * as twelveData from "@/providers/twelve-data"
 import type { ProviderName, WeeklyOhlcvResult } from "@/providers/types"
 import { VOLUME_CANDLE_COUNT } from "@/scoring/candles"
@@ -14,16 +15,63 @@ type FetchableAsset = {
   symbol: string
 }
 
-const fetchFromBinance = (
-  providerName: ProviderName,
+const extractBaseSymbol = (providerSymbol: string): string =>
+  providerSymbol.toUpperCase().replace(/USDT$/, "")
+
+const fetchFromKraken = (
+  providerSymbol: string,
+  minCount: number
+): Promise<WeeklyOhlcvResult> => kraken.fetchWeeklyOhlcv(providerSymbol, minCount)
+
+const fetchFromBinanceUs = (
+  providerSymbol: string,
+  minCount: number
+): Promise<WeeklyOhlcvResult> => binanceUs.fetchWeeklyOhlcv(providerSymbol, minCount)
+
+const fetchKrakenFallbackForBase = async (
+  baseSymbol: string,
+  minCount: number
+): Promise<WeeklyOhlcvResult> => {
+  const pair = await kraken.resolveUsdtPair(baseSymbol)
+
+  if (!pair) {
+    return {
+      ok: false,
+      nullReason: "unsupported_asset",
+      message: `No Kraken USDT pair found for ${baseSymbol}`,
+      provider: "kraken",
+    }
+  }
+
+  return fetchFromKraken(pair.providerSymbol, minCount)
+}
+
+export const fetchCryptoWeeklyOhlcv = async (
+  providerName: ProviderName | string | null,
   providerSymbol: string,
   minCount: number
 ): Promise<WeeklyOhlcvResult> => {
-  if (providerName === "binance_us") {
-    return binanceUs.fetchWeeklyOhlcv(providerSymbol, minCount)
+  const baseSymbol = extractBaseSymbol(providerSymbol)
+
+  if (providerName === "kraken") {
+    return fetchFromKraken(providerSymbol, minCount)
   }
 
-  return binanceGlobal.fetchWeeklyOhlcv(providerSymbol, minCount)
+  if (providerName === "binance_us" || providerName === "binance_global" || !providerName) {
+    const usResult = await fetchFromBinanceUs(buildUsdtPairSymbol(baseSymbol), minCount)
+
+    if (usResult.ok) {
+      return usResult
+    }
+
+    return fetchKrakenFallbackForBase(baseSymbol, minCount)
+  }
+
+  return {
+    ok: false,
+    nullReason: "invalid_provider",
+    message: `Unknown crypto provider ${providerName}`,
+  }
 }
 
 export const fetchWeeklyOhlcv = async (
@@ -52,8 +100,12 @@ export const fetchWeeklyOhlcv = async (
     })
   }
 
-  if (asset.providerName === "binance_global" || asset.providerName === "binance_us") {
-    return fetchFromBinance(asset.providerName, asset.providerSymbol, minCount)
+  if (
+    asset.providerName === "binance_us" ||
+    asset.providerName === "binance_global" ||
+    asset.providerName === "kraken"
+  ) {
+    return fetchCryptoWeeklyOhlcv(asset.providerName, asset.providerSymbol, minCount)
   }
 
   return {
@@ -73,14 +125,7 @@ export const fetchWeeklyOhlcvForSymbol = async (
     return twelveData.fetchWeeklyOhlcv(symbol, minCount, { exchange })
   }
 
-  const providerSymbol = `${symbol.toUpperCase()}USDT`
-  const globalResult = await binanceGlobal.fetchWeeklyOhlcv(providerSymbol, minCount)
-
-  if (globalResult.ok) {
-    return globalResult
-  }
-
-  return binanceUs.fetchWeeklyOhlcv(providerSymbol, minCount)
+  return fetchCryptoWeeklyOhlcv("binance_us", buildUsdtPairSymbol(symbol), minCount)
 }
 
 export const fetchBenchmarkWeeklyOhlcv = async (

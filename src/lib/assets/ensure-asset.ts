@@ -1,5 +1,6 @@
 import { db } from "@/db/client"
 import { assets } from "@/db/schema"
+import { finalizeAssetDto } from "@/lib/assets/backfill-stock-exchange"
 import { resolveBenchmarkSymbol } from "@/lib/assets/benchmark"
 import { getCatalogEntryBySymbol } from "@/lib/assets/catalog-queries"
 import { getAssetBySymbol } from "@/lib/assets/queries"
@@ -26,10 +27,10 @@ export const ensureAsset = async (symbol: string): Promise<AssetDto | null> => {
         await resolveStockAssetBySymbol(normalized)
       }
 
-      return getAssetBySymbol(normalized)
+      return finalizeAssetDto(await getAssetBySymbol(normalized))
     }
 
-    return existing
+    return finalizeAssetDto(existing)
   }
 
   const catalogEntry = await getCatalogEntryBySymbol(normalized)
@@ -67,7 +68,7 @@ export const ensureAsset = async (symbol: string): Promise<AssetDto | null> => {
       return null
     }
 
-    return raced
+    return finalizeAssetDto(raced)
   }
 
   if (catalogEntry.assetType === "crypto") {
@@ -76,5 +77,5 @@ export const ensureAsset = async (symbol: string): Promise<AssetDto | null> => {
     await resolveStockAssetBySymbol(normalized)
   }
 
-  return getAssetBySymbol(normalized)
+  return finalizeAssetDto(await getAssetBySymbol(normalized))
 }

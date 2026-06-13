@@ -3,7 +3,7 @@ import {
   fetchBenchmarkWeeklyOhlcv,
   fetchWeeklyOhlcvFromDto,
 } from "@/providers/market-data"
-import type { SourceMetadata } from "@/providers/types"
+import type { SourceMetadata, WeeklyOhlcvResult } from "@/providers/types"
 import {
   normalizeWeeklyOhlcvCandles,
   RSI_MIN_CANDLE_COUNT,
@@ -63,11 +63,13 @@ const computeRsiFromOhlcv = async (
 export type RelativityInput = {
   asset: AssetDto
   benchmarkRsi?: number | null
+  weeklyOhlcv?: WeeklyOhlcvResult
 }
 
 export const computeRelativity = async ({
   asset,
   benchmarkRsi: cachedBenchmarkRsi,
+  weeklyOhlcv,
 }: RelativityInput): Promise<SectorScoreResult> => {
   if (asset.resolutionStatus === "unsupported") {
     return nullResult("unsupported_asset", { symbol: asset.symbol })
@@ -76,7 +78,8 @@ export const computeRelativity = async ({
   const benchmarkSymbol = resolveBenchmarkSymbol(asset)
   const assetType = asset.assetType === "stock" ? "stock" : "crypto"
 
-  const assetOhlcv = await fetchWeeklyOhlcvFromDto(asset, RSI_MIN_CANDLE_COUNT)
+  const assetOhlcv =
+    weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, RSI_MIN_CANDLE_COUNT))
 
   if (!assetOhlcv.ok) {
     return nullResult(assetOhlcv.nullReason, { error: assetOhlcv.message })

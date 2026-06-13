@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm"
+import { and, eq, inArray, or } from "drizzle-orm"
 import { db } from "@/db/client"
 import { assets } from "@/db/schema"
 import { getCatalogEntryBySymbol } from "@/lib/assets/catalog-queries"
@@ -136,6 +136,20 @@ export const resolveAssetsBySymbols = async (
 export const resolvePendingAssets = async (): Promise<ResolveAssetResult[]> => {
   const rows = await db.query.assets.findMany({
     where: eq(assets.resolutionStatus, "needs_review"),
+  })
+
+  return resolveAssetsBySymbols(rows.map((row) => row.symbol))
+}
+
+export const resolveLegacyCryptoAssets = async (): Promise<ResolveAssetResult[]> => {
+  const rows = await db.query.assets.findMany({
+    where: and(
+      eq(assets.assetType, "crypto"),
+      or(
+        eq(assets.providerName, "binance_global"),
+        eq(assets.resolutionStatus, "needs_review")
+      )
+    ),
   })
 
   return resolveAssetsBySymbols(rows.map((row) => row.symbol))

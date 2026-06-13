@@ -12,6 +12,7 @@ const envSchema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().min(1),
   FRED_API_KEY: z.string().min(1),
   TWELVE_DATA_API_KEY: z.string().min(1),
+  TWELVE_DATA_MAX_CALLS_PER_MINUTE: z.coerce.number().int().positive().default(7),
   PROVIDER_FETCH_MAX_RETRIES: z.coerce.number().int().positive().default(3),
   PROVIDER_FETCH_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
 })

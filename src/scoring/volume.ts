@@ -1,6 +1,6 @@
 import type { AssetDto } from "@/lib/assets/types"
 import { fetchWeeklyOhlcvFromDto } from "@/providers/market-data"
-import type { SourceMetadata } from "@/providers/types"
+import type { SourceMetadata, WeeklyOhlcvResult } from "@/providers/types"
 import {
   normalizeWeeklyOhlcvCandles,
   VOLUME_CANDLE_COUNT,
@@ -16,7 +16,10 @@ export {
   computeVolumeFromCandles,
 } from "@/scoring/volume-formula"
 
-export const computeVolume = async (asset: AssetDto): Promise<SectorScoreResult> => {
+export const computeVolume = async (
+  asset: AssetDto,
+  weeklyOhlcv?: WeeklyOhlcvResult
+): Promise<SectorScoreResult> => {
   if (asset.resolutionStatus === "unsupported") {
     return {
       score: null,
@@ -26,7 +29,7 @@ export const computeVolume = async (asset: AssetDto): Promise<SectorScoreResult>
     }
   }
 
-  const ohlcv = await fetchWeeklyOhlcvFromDto(asset, VOLUME_CANDLE_COUNT)
+  const ohlcv = weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, VOLUME_CANDLE_COUNT))
 
   if (!ohlcv.ok) {
     return {

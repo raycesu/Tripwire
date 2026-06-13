@@ -30,13 +30,13 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
   for (const asset of assets) {
     summary.attempted += 1
     let assetSucceeded = true
+    const benchmarkSymbol = resolveBenchmarkSymbol(asset)
+    const assetType = asset.assetType === "stock" ? "stock" : "crypto"
+    const benchmarkRsi = await context.getBenchmarkRsi(benchmarkSymbol, assetType)
+    const weeklyOhlcv = await context.getAssetWeeklyOhlcv(asset)
 
     try {
-      const benchmarkSymbol = resolveBenchmarkSymbol(asset)
-      const assetType = asset.assetType === "stock" ? "stock" : "crypto"
-      const benchmarkRsi = await context.getBenchmarkRsi(benchmarkSymbol, assetType)
-
-      const relativityResult = await computeRelativity({ asset, benchmarkRsi })
+      const relativityResult = await computeRelativity({ asset, benchmarkRsi, weeklyOhlcv })
       recordNullReason(summary, relativityResult)
       const relativityValidForDate = resolveValidForDate(
         "relativity",
@@ -74,7 +74,7 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
     }
 
     try {
-      const volumeResult = await computeVolume(asset)
+      const volumeResult = await computeVolume(asset, weeklyOhlcv)
       recordNullReason(summary, volumeResult)
       const volumeValidForDate = resolveValidForDate(
         "volume",

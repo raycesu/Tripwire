@@ -5,7 +5,7 @@ import {
 } from "@/lib/assets/stock-exchange-allowlist"
 import { mergeStockCatalogEntries } from "@/lib/assets/merge-stock-catalog"
 import { env } from "@/lib/env"
-import { fetchJson } from "@/providers/http"
+import { fetchTwelveDataJson } from "@/providers/twelve-data-fetch"
 import { getOrFetch } from "@/providers/provider-cache"
 import type { ProviderName } from "@/providers/types"
 
@@ -81,7 +81,7 @@ const fetchStocksForMic = async (micCode: string): Promise<StockCatalogEntry[]> 
   url.searchParams.set("exchange", allowlistEntry.exchangeName)
   url.searchParams.set("type", "Common Stock")
 
-  const data = await fetchJson(url.toString(), stocksListSchema, PROVIDER)
+  const data = await fetchTwelveDataJson(url.toString(), stocksListSchema)
 
   if (!data.data || data.data.length === 0) {
     if (data.message) {

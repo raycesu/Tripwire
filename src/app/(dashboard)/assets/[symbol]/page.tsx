@@ -1,12 +1,14 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AssetResolutionBadge } from "@/components/assets/asset-resolution-badge"
+import { TradingViewChartSection } from "@/components/assets/trading-view-chart-section"
 import { ScoreHistorySection } from "@/components/scores/score-history-section"
 import { SectorScoresPanel } from "@/components/scores/sector-scores-panel"
 import { WatchlistToggleButton } from "@/components/watchlist/watchlist-toggle-button"
 import { ensureAsset } from "@/lib/assets/ensure-asset"
 import { isAssetOnWatchlist } from "@/lib/assets/queries"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
+import { resolveTradingViewSymbolForAsset } from "@/lib/market-data/resolve-tradingview-symbol"
 import { getLatestSnapshotsForAsset, getScoreHistory } from "@/lib/scores/queries"
 
 type AssetDetailPageProps = {
@@ -35,6 +37,7 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
   const sectorSnapshots = [summary.macro, summary.relativity, summary.volume].filter(
     (snapshot): snapshot is NonNullable<typeof snapshot> => snapshot !== null
   )
+  const tradingViewSymbol = await resolveTradingViewSymbolForAsset(asset)
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
@@ -91,6 +94,11 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
           <p className="mt-4 text-sm text-destructive">{asset.unsupportedReason}</p>
         ) : null}
       </section>
+
+      <TradingViewChartSection
+        tradingViewSymbol={tradingViewSymbol}
+        assetSymbol={asset.symbol}
+      />
 
       <SectorScoresPanel
         assetType={asset.assetType}

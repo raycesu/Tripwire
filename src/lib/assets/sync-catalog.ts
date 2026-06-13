@@ -3,12 +3,13 @@ import { db } from "@/db/client"
 import { assetCatalog, assets } from "@/db/schema"
 import {
   mapBinanceBasesToCatalog,
+  mapKrakenBasesToCatalog,
   mergeCryptoCatalogEntries,
   type CryptoCatalogEntry,
 } from "@/lib/assets/build-crypto-catalog"
 import { logInfo } from "@/lib/logging/logger"
-import * as binanceGlobal from "@/providers/binance"
 import * as binanceUs from "@/providers/binance-us"
+import * as kraken from "@/providers/kraken"
 import { listStockCatalogEntries, type StockCatalogEntry } from "@/providers/twelve-data-symbols"
 
 const UPSERT_BATCH_SIZE = 500
@@ -124,14 +125,14 @@ export const pruneOrphanedStockAssets = async (
 }
 
 export const buildCryptoCatalog = async (): Promise<CryptoCatalogEntry[]> => {
-  const [globalBases, usBases] = await Promise.all([
-    binanceGlobal.listTradableUsdtBases(),
+  const [usBases, krakenBases] = await Promise.all([
     binanceUs.listTradableUsdtBases(),
+    kraken.listTradableUsdtBases(),
   ])
 
   return mergeCryptoCatalogEntries(
-    mapBinanceBasesToCatalog(globalBases),
-    mapBinanceBasesToCatalog(usBases)
+    mapBinanceBasesToCatalog(usBases),
+    mapKrakenBasesToCatalog(krakenBases)
   )
 }
 

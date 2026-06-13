@@ -1,8 +1,10 @@
 import type { AssetDto } from "@/lib/assets/types"
-import { fetchBenchmarkWeeklyOhlcv } from "@/providers/market-data"
+import { fetchBenchmarkWeeklyOhlcv, fetchWeeklyOhlcvFromDto } from "@/providers/market-data"
+import type { WeeklyOhlcvResult } from "@/providers/types"
 import {
   normalizeWeeklyOhlcvCandles,
   RSI_MIN_CANDLE_COUNT,
+  VOLUME_CANDLE_COUNT,
 } from "@/scoring/candles"
 import { latestRsi } from "@/scoring/indicators"
 import { computeCryptoMacro, computeStockMacro } from "@/scoring/macro"
@@ -12,6 +14,7 @@ export class ScoringContext {
   private cryptoMacroResult: SectorScoreResult | null = null
   private stockMacroResult: SectorScoreResult | null = null
   private readonly benchmarkRsiCache = new Map<string, number>()
+  private readonly assetWeeklyOhlcvCache = new Map<string, Promise<WeeklyOhlcvResult>>()
 
   async getCryptoMacro(): Promise<SectorScoreResult> {
     if (!this.cryptoMacroResult) {
@@ -68,5 +71,17 @@ export class ScoringContext {
     }
 
     return rsi
+  }
+
+  getAssetWeeklyOhlcv(asset: AssetDto): Promise<WeeklyOhlcvResult> {
+    const cached = this.assetWeeklyOhlcvCache.get(asset.id)
+
+    if (cached) {
+      return cached
+    }
+
+    const fetchPromise = fetchWeeklyOhlcvFromDto(asset, VOLUME_CANDLE_COUNT)
+    this.assetWeeklyOhlcvCache.set(asset.id, fetchPromise)
+    return fetchPromise
   }
 }

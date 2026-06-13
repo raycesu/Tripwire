@@ -41,4 +41,22 @@ describe("fetchJson retries", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
+
+  it("captures Retry-After on 429", async () => {
+    const fetchMock = vi.mocked(fetch)
+
+    fetchMock.mockResolvedValueOnce(
+      new Response("rate limited", {
+        status: 429,
+        headers: { "Retry-After": "5" },
+      })
+    )
+
+    await expect(
+      fetchJson("https://example.com/data", schema, "binance_global", { maxRetries: 1 })
+    ).rejects.toMatchObject({
+      status: 429,
+      retryAfterMs: 5_000,
+    })
+  })
 })

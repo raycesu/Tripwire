@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { env } from "@/lib/env"
 import { normalizeWeeklyOhlcvCandles, VOLUME_CANDLE_COUNT } from "@/scoring/candles"
-import { fetchJson } from "@/providers/http"
+import { fetchTwelveDataJson } from "@/providers/twelve-data-fetch"
 import type { ProviderName, WeeklyOhlcvCandle, WeeklyOhlcvResult } from "@/providers/types"
 import { ProviderError } from "@/providers/types"
 
@@ -72,7 +72,7 @@ export const getWeeklyTimeSeriesRaw = async (
     url.searchParams.set("mic_code", options.micCode)
   }
 
-  const data = await fetchJson(url.toString(), timeSeriesSchema, PROVIDER)
+  const data = await fetchTwelveDataJson(url.toString(), timeSeriesSchema)
 
   if (!data.values || data.values.length === 0) {
     throw new ProviderError(

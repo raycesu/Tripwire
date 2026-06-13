@@ -1,7 +1,13 @@
-import { resolveAllSeedAssets } from "@/lib/assets/resolve-assets"
+import {
+  resolveLegacyCryptoAssets,
+  resolvePendingAssets,
+} from "@/lib/assets/resolve-assets"
 
 const run = async () => {
-  const results = await resolveAllSeedAssets()
+  const useLegacyCrypto = process.argv.includes("--legacy-crypto")
+  const results = useLegacyCrypto
+    ? await resolveLegacyCryptoAssets()
+    : await resolvePendingAssets()
 
   console.log("Asset resolution results:\n")
 
