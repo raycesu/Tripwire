@@ -1,3 +1,8 @@
+import {
+  BREAKDOWN_TOOLTIPS,
+  getBenchmarkRsiTooltip,
+} from "@/lib/scores/breakdown-tooltips"
+
 const formatNum = (value: unknown): string => {
   if (value === null || value === undefined) {
     return "—"
@@ -24,6 +29,7 @@ export type BreakdownRow = {
   score?: string
   weight?: string
   detail?: string
+  tooltip?: string
 }
 
 export const buildMacroBreakdownRows = (
@@ -41,15 +47,27 @@ export const buildMacroBreakdownRows = (
     const rows: BreakdownRow[] = []
 
     if (fearGreed) {
+      const fearGreedReading =
+        fearGreed.label !== undefined
+          ? fearGreed.classification !== undefined &&
+            String(fearGreed.classification) !== String(fearGreed.label)
+            ? `${String(fearGreed.label)} (${String(fearGreed.classification)})`
+            : String(fearGreed.label)
+          : fearGreed.classification !== undefined
+            ? String(fearGreed.classification)
+            : undefined
+
+      const fearGreedTooltip =
+        fearGreedReading !== undefined
+          ? `${BREAKDOWN_TOOLTIPS.fear_greed} Current reading: ${fearGreedReading}.`
+          : BREAKDOWN_TOOLTIPS.fear_greed
+
       rows.push({
         label: "Fear & Greed",
         value: formatNum(fearGreed.value),
         score: formatNum(fearGreed.score),
         weight: fearGreed.weight !== undefined ? `${(Number(fearGreed.weight) * 100).toFixed(0)}%` : undefined,
-        detail:
-          fearGreed.label !== undefined
-            ? `${String(fearGreed.label)} (${String(fearGreed.classification ?? "")})`
-            : undefined,
+        tooltip: fearGreedTooltip,
       })
     }
 
@@ -70,12 +88,17 @@ export const buildMacroBreakdownRows = (
   const rows: BreakdownRow[] = []
 
   if (vix) {
+    const vixTooltip =
+      vix.date !== undefined
+        ? `${BREAKDOWN_TOOLTIPS.vix} As of ${String(vix.date)}.`
+        : BREAKDOWN_TOOLTIPS.vix
+
     rows.push({
       label: "VIX",
       value: formatNum(vix.value),
       score: formatNum(vix.score),
       weight: vix.weight !== undefined ? `${(Number(vix.weight) * 100).toFixed(0)}%` : undefined,
-      detail: vix.date !== undefined ? `As of ${String(vix.date)}` : undefined,
+      tooltip: vixTooltip,
     })
   }
 
@@ -98,23 +121,25 @@ export const buildRelativityBreakdownRows = (
     return []
   }
 
+  const benchmarkSymbol =
+    components.benchmark_symbol !== undefined
+      ? String(components.benchmark_symbol)
+      : undefined
+
   return [
     {
       label: "Asset RSI(14)",
       value: formatNum(components.asset_rsi),
     },
     {
-      label: "Benchmark",
-      value: String(components.benchmark_symbol ?? "—"),
-    },
-    {
       label: "Benchmark RSI(14)",
       value: formatNum(components.benchmark_rsi),
+      tooltip: getBenchmarkRsiTooltip(benchmarkSymbol),
     },
     {
       label: "Relativity index",
       value: formatNum(components.relativity_index),
-      detail: "clamp((benchmark_rsi − asset_rsi) / 8, −2, +2)",
+      tooltip: BREAKDOWN_TOOLTIPS.relativity_index,
     },
   ]
 }
@@ -131,18 +156,36 @@ export const buildVolumeBreakdownRows = (
   }
 
   return [
-    { label: "V trend", value: formatNum(components.v_trend), score: formatNum(components.v_trend) },
+    {
+      label: "V trend",
+      value: formatNum(components.v_trend),
+      tooltip: BREAKDOWN_TOOLTIPS.v_trend,
+    },
     {
       label: "P context",
       value: formatNum(components.p_context),
-      score: formatNum(components.p_context),
-      weight: "40%",
-      detail: "Blended 60% V trend + 40% P context before gate",
+      tooltip: BREAKDOWN_TOOLTIPS.p_context,
     },
-    { label: "RSI(14) now", value: formatNum(components.rsi_now) },
-    { label: "Gate", value: formatNum(components.gate) },
-    { label: "Decel factor", value: formatNum(components.decel_factor) },
-    { label: "Raw blend", value: formatNum(components.raw) },
+    {
+      label: "RSI(14) now",
+      value: formatNum(components.rsi_now),
+      tooltip: BREAKDOWN_TOOLTIPS.rsi_now,
+    },
+    {
+      label: "Gate",
+      value: formatNum(components.gate),
+      tooltip: BREAKDOWN_TOOLTIPS.gate,
+    },
+    {
+      label: "Decel factor",
+      value: formatNum(components.decel_factor),
+      tooltip: BREAKDOWN_TOOLTIPS.decel_factor,
+    },
+    {
+      label: "Raw blend",
+      value: formatNum(components.raw),
+      tooltip: BREAKDOWN_TOOLTIPS.raw,
+    },
   ]
 }
 

@@ -26,7 +26,7 @@ export const ScoreChip = ({
   className,
 }: ScoreChipProps) => {
   const tone = getScoreToneFromString(score)
-  const toneClasses = tone ? getScoreColorClasses(tone) : "border-border bg-muted/40 text-muted-foreground"
+  const toneClasses = tone ? getScoreColorClasses(tone) : "border-white/25 bg-white/8 text-white/70"
   const numeric = score !== null ? Number(score) : NaN
   const interpretation =
     !Number.isNaN(numeric) && showInterpretation ? getScoreInterpretation(numeric) : null

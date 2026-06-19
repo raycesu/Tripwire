@@ -18,7 +18,7 @@ export const SectorMiniIndicator = ({ label, snapshot }: SectorMiniIndicatorProp
     return (
       <span
         title={title}
-        className="inline-flex size-6 items-center justify-center rounded border border-border bg-muted/40 text-[10px] font-medium uppercase text-muted-foreground"
+        className="inline-flex size-6 items-center justify-center rounded border border-white/25 bg-white/8 text-[10px] font-medium uppercase text-white/45"
         aria-label={title}
       >
         —
@@ -29,7 +29,7 @@ export const SectorMiniIndicator = ({ label, snapshot }: SectorMiniIndicatorProp
   const tone = getScoreToneFromString(snapshot.score)
   const colorClasses = tone
     ? getScoreColorClasses(tone)
-    : "border-border bg-muted/40 text-muted-foreground"
+    : "border-white/25 bg-white/8 text-white/50"
 
   return (
     <span

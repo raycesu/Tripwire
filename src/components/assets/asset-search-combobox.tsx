@@ -19,6 +19,9 @@ type AssetTypeFilter = "all" | AssetType
 
 type AssetSearchComboboxProps = {
   className?: string
+  layout?: "dropdown" | "panel"
+  placeholder?: string
+  onAssetSelected?: () => void
 }
 
 const FILTER_OPTIONS: Array<{ value: AssetTypeFilter; label: string }> = [
@@ -27,7 +30,12 @@ const FILTER_OPTIONS: Array<{ value: AssetTypeFilter; label: string }> = [
   { value: "stock", label: "Stocks" },
 ]
 
-export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => {
+export const AssetSearchCombobox = ({
+  className,
+  layout = "dropdown",
+  placeholder = "Search by ticker (e.g. ETH, TSLA)",
+  onAssetSelected,
+}: AssetSearchComboboxProps) => {
   const router = useRouter()
   const listboxId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -46,9 +54,10 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
       setQuery("")
       setResults([])
       setActiveIndex(-1)
+      onAssetSelected?.()
       router.push(`/assets/${symbol}`)
     },
-    [router]
+    [onAssetSelected, router]
   )
 
   useEffect(() => {
@@ -101,6 +110,10 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
   }, [query, typeFilter])
 
   useEffect(() => {
+    if (layout === "panel") {
+      return
+    }
+
     const handlePointerDown = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
         setIsOpen(false)
@@ -109,7 +122,7 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
 
     document.addEventListener("mousedown", handlePointerDown)
     return () => document.removeEventListener("mousedown", handlePointerDown)
-  }, [])
+  }, [layout])
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const nextQuery = event.target.value
@@ -138,7 +151,11 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
       return
     }
 
-    if (!isOpen || results.length === 0) {
+    if (layout !== "panel" && !isOpen) {
+      return
+    }
+
+    if (results.length === 0) {
       return
     }
 
@@ -197,57 +214,103 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
     handleSelect(symbol)
   }
 
-  const showDropdown = isOpen && query.trim().length >= 2
+  const trimmedQuery = query.trim()
+  const showResults = layout === "panel" ? trimmedQuery.length >= 2 : isOpen && trimmedQuery.length >= 2
+
+  const filterPills = (
+    <div
+      className={cn(layout === "panel" ? "mt-3 flex gap-2" : "mb-3 flex flex-wrap gap-2")}
+      style={layout === "panel" ? { display: "flex", gap: "0.5rem", marginTop: "0.75rem" } : undefined}
+    >
+      {FILTER_OPTIONS.map((option) => {
+        const isActive = typeFilter === option.value
+
+        return (
+        <button
+          key={option.value}
+          type="button"
+          tabIndex={0}
+          aria-pressed={isActive}
+          aria-label={`Filter search to ${option.label}`}
+          className={cn(
+            "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+            layout === "panel" ? "text-center" : isActive ? "silver-pill-active" : "silver-pill"
+          )}
+          style={
+            layout === "panel"
+              ? {
+                  flex: 1,
+                  backgroundColor: isActive ? "#ffffff" : "rgb(38, 38, 38)",
+                  color: isActive ? "#000000" : "rgba(255, 255, 255, 0.78)",
+                  border: isActive ? "1px solid #ffffff" : "1px solid rgba(255, 255, 255, 0.18)",
+                }
+              : undefined
+          }
+          onClick={() => handleFilterClick(option.value)}
+          onKeyDown={(event) => handleFilterKeyDown(event, option.value)}
+        >
+          {option.label}
+        </button>
+        )
+      })}
+    </div>
+  )
+
+  const searchInput = (
+    <div className="relative">
+      <Search
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-white/45"
+        aria-hidden="true"
+      />
+      <input
+        ref={inputRef}
+        type="search"
+        value={query}
+        role="combobox"
+        aria-expanded={showResults}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        aria-activedescendant={
+          activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
+        }
+        aria-label="Search assets by ticker or name"
+        placeholder={placeholder}
+        autoComplete="off"
+        autoFocus={layout === "panel"}
+        className={cn(
+          "h-11 w-full rounded-lg border pr-4 pl-10 text-sm outline-none",
+          layout === "panel"
+            ? "text-white placeholder:text-white/40"
+            : "glass-input text-white/95 placeholder:text-white/40"
+        )}
+        style={
+          layout === "panel"
+            ? {
+                backgroundColor: "rgb(32, 32, 32)",
+                borderColor: "rgba(255, 255, 255, 0.28)",
+              }
+            : undefined
+        }
+        onChange={handleInputChange}
+        onFocus={handleInputFocus}
+        onKeyDown={handleInputKeyDown}
+      />
+    </div>
+  )
 
   return (
     <div ref={containerRef} className={cn("relative w-full", className)}>
-      <div className="mb-3 flex flex-wrap gap-2">
-        {FILTER_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            tabIndex={0}
-            aria-pressed={typeFilter === option.value}
-            aria-label={`Filter search to ${option.label}`}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-              typeFilter === option.value
-                ? "border-accent bg-accent/15 text-accent"
-                : "border-border bg-muted/40 text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => handleFilterClick(option.value)}
-            onKeyDown={(event) => handleFilterKeyDown(event, option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="relative">
-        <Search
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <input
-          ref={inputRef}
-          type="search"
-          value={query}
-          role="combobox"
-          aria-expanded={showDropdown}
-          aria-controls={listboxId}
-          aria-autocomplete="list"
-          aria-activedescendant={
-            activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
-          }
-          aria-label="Search assets by ticker or name"
-          placeholder="Search by ticker (e.g. ETH, TSLA)"
-          autoComplete="off"
-          className="h-11 w-full rounded-lg border border-border bg-background pr-4 pl-10 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          onChange={handleInputChange}
-          onFocus={handleInputFocus}
-          onKeyDown={handleInputKeyDown}
-        />
-      </div>
+      {layout === "panel" ? (
+        <>
+          {searchInput}
+          {filterPills}
+        </>
+      ) : (
+        <>
+          {filterPills}
+          {searchInput}
+        </>
+      )}
 
       {errorMessage ? (
         <p className="mt-2 text-sm text-destructive" role="alert">
@@ -255,23 +318,27 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
         </p>
       ) : null}
 
-      {showDropdown ? (
+      {showResults ? (
         <div
-          className="absolute z-20 mt-2 w-full overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+          className={cn(
+            layout === "panel"
+              ? "mt-4 max-h-[min(24rem,50vh)] overflow-y-auto"
+              : "glass-popover absolute z-20 mt-2 w-full overflow-hidden rounded-lg"
+          )}
           role="presentation"
         >
           <ul
             id={listboxId}
             role="listbox"
             aria-label="Asset search results"
-            className="max-h-72 overflow-y-auto py-1"
+            className={cn(layout === "panel" ? undefined : "max-h-72 overflow-y-auto py-1")}
           >
             {isLoading ? (
-              <li className="px-4 py-3 text-sm text-muted-foreground">Searching…</li>
+              <li className="px-1 py-3 text-sm text-white/45">Searching…</li>
             ) : null}
 
             {!isLoading && results.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-muted-foreground">
+              <li className="px-1 py-3 text-sm text-white/45">
                 No supported assets match that ticker.
               </li>
             ) : null}
@@ -286,26 +353,36 @@ export const AssetSearchCombobox = ({ className }: AssetSearchComboboxProps) => 
                       aria-selected={activeIndex === index}
                       tabIndex={0}
                       className={cn(
-                        "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-muted/60",
-                        activeIndex === index ? "bg-muted/60" : undefined
+                        "flex w-full items-center justify-between gap-3 rounded-lg px-1 py-2.5 text-left text-sm transition-colors hover:bg-white/6",
+                        activeIndex === index ? "bg-white/8" : undefined,
+                        layout !== "panel" && "px-4 py-3 hover:bg-white/8"
                       )}
                       onClick={() => handleResultClick(result.symbol)}
                       onKeyDown={(event) => handleResultKeyDown(event, result.symbol)}
                       onMouseEnter={() => setActiveIndex(index)}
                     >
-                      <span className="min-w-0">
-                        <span className="font-medium text-foreground">{result.symbol}</span>
-                        <span className="mt-0.5 block truncate text-muted-foreground">
-                          {result.name}
+                      {layout === "panel" ? (
+                        <span className="min-w-0 truncate">
+                          <span className="font-semibold text-white">{result.symbol}</span>
+                          <span className="ml-2 text-white/50">{result.name}</span>
                         </span>
-                      </span>
+                      ) : (
+                        <span className="min-w-0">
+                          <span className="font-medium text-foreground">{result.symbol}</span>
+                          <span className="mt-0.5 block truncate text-muted-foreground">
+                            {result.name}
+                          </span>
+                        </span>
+                      )}
                       <span className="flex shrink-0 items-center gap-2">
                         {result.assetType === "stock" && result.exchange ? (
                           <Badge variant="default">{result.exchange}</Badge>
                         ) : null}
-                        <Badge variant="default" className="capitalize">
-                          {result.assetType}
-                        </Badge>
+                        {layout !== "panel" ? (
+                          <Badge variant="default" className="capitalize">
+                            {result.assetType}
+                          </Badge>
+                        ) : null}
                       </span>
                     </button>
                   </li>

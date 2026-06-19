@@ -28,14 +28,14 @@ export const ScoringRunsSummary = ({
     (lastWeeklyJob?.status === "partial_failure" && (lastWeeklyJob.assetsFailed ?? 0) > 0)
 
   return (
-    <article className="rounded-xl border border-border bg-card p-5 md:col-span-1">
-      <p className="text-xs uppercase tracking-wider text-muted-foreground">Scoring runs</p>
+    <article className="surface-card p-5 md:col-span-1">
+      <p className="text-silver-label">Scoring runs</p>
       <ul className="mt-3 space-y-2 text-sm font-medium text-foreground">
         <li>{formatJobLine(lastDailyJob, "Daily")}</li>
         <li>{formatJobLine(lastWeeklyJob, "Weekly")}</li>
       </ul>
       {hasPartialFailure ? (
-        <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
+        <p className="mt-3 text-xs text-accent">
           Some assets failed to score in the latest run. Scores may be incomplete until the next
           successful run.
         </p>

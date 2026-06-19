@@ -1,3 +1,9 @@
+import {
+  getScoreToneColorClasses,
+  getScoreTextColorClass,
+  getScoreInterpretationColorClass,
+} from "@/lib/scores/colors"
+
 export type ScoreTone =
   | "strong_opportunity"
   | "opportunity"
@@ -42,19 +48,10 @@ export const getScoreInterpretation = (scoreValue: number): string => {
   }
 }
 
+export { getScoreTextColorClass, getScoreInterpretationColorClass }
+
 export const getScoreColorClasses = (tone: ScoreTone): string => {
-  switch (tone) {
-    case "strong_opportunity":
-      return "border-chart-1/50 bg-chart-1/15 text-chart-1"
-    case "opportunity":
-      return "border-chart-1/30 bg-chart-1/10 text-chart-1"
-    case "neutral":
-      return "border-border bg-muted/60 text-muted-foreground"
-    case "caution":
-      return "border-destructive/30 bg-destructive/10 text-destructive"
-    case "overheated":
-      return "border-destructive/50 bg-destructive/15 text-destructive"
-  }
+  return getScoreToneColorClasses(tone)
 }
 
 export const getScoreToneFromString = (score: string | null): ScoreTone | null => {

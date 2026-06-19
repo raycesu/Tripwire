@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { AddAssetsDialog } from "@/components/assets/add-assets-dialog"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "Watchlist" },
   { href: "/alerts", label: "Alerts" },
   { href: "/settings", label: "Settings" },
 ] as const
@@ -24,10 +25,8 @@ export const DashboardNav = () => {
             key={item.href}
             href={item.href}
             className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              "rounded-full px-3 py-1.5 text-sm font-medium transition-all",
+              isActive ? "nav-link-active" : "nav-link-idle"
             )}
             aria-current={isActive ? "page" : undefined}
           >
@@ -35,6 +34,7 @@ export const DashboardNav = () => {
           </Link>
         )
       })}
+      <AddAssetsDialog />
     </nav>
   )
 }

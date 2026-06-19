@@ -82,15 +82,8 @@ const TradingViewChartWidget = ({
   }, [tradingViewSymbol])
 
   return (
-    <section
-      className="rounded-xl border border-border bg-card p-6"
-      role="region"
-      aria-label={`Price chart for ${assetSymbol}`}
-    >
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Price chart
-      </h2>
-      <div className="relative mt-4 w-full" style={{ height: CHART_HEIGHT_PX }}>
+    <section role="region" aria-label={`Price chart for ${assetSymbol}`}>
+      <div className="relative w-full" style={{ height: CHART_HEIGHT_PX }}>
         {isLoading ? (
           <Skeleton
             className="absolute inset-0 h-full w-full rounded-md"
@@ -113,15 +106,8 @@ export const TradingViewChartSection = ({
 }: TradingViewChartSectionProps) => {
   if (!tradingViewSymbol) {
     return (
-      <section
-        className="rounded-xl border border-border bg-card p-6"
-        role="region"
-        aria-label={`Price chart for ${assetSymbol}`}
-      >
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Price chart
-        </h2>
-        <p className="mt-4 text-sm text-muted-foreground">
+      <section role="region" aria-label={`Price chart for ${assetSymbol}`}>
+        <p className="text-sm text-muted-foreground">
           Price chart is unavailable for unsupported or unresolved assets.
         </p>
       </section>

@@ -8,6 +8,7 @@ type EmptyStateProps = {
   icon?: LucideIcon
   actionHref?: string
   actionLabel?: string
+  variant?: "card" | "plain"
 }
 
 export const EmptyState = ({
@@ -16,10 +17,17 @@ export const EmptyState = ({
   icon: Icon = Inbox,
   actionHref,
   actionLabel,
+  variant = "card",
 }: EmptyStateProps) => {
   return (
-    <div className="rounded-lg border border-dashed border-border p-8 text-center">
-      <Icon className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
+    <div
+      className={
+        variant === "plain"
+          ? "py-12 text-center"
+          : "surface-card border-dashed p-8 text-center"
+      }
+    >
+      <Icon className="mx-auto size-8 text-white/45" aria-hidden="true" />
       <p className="mt-3 text-sm font-medium text-foreground">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       {actionHref && actionLabel ? (

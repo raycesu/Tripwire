@@ -2,16 +2,15 @@
 
 import { useMemo, useState } from "react"
 import {
-  CartesianGrid,
   Line,
   LineChart,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts"
 import type { ScoreHistoryPoint } from "@/lib/scores/types"
+import { scoreToOklch } from "@/lib/scores/colors"
 import { formatScore, getScoreInterpretation } from "@/lib/scores/labels"
 type HistoryBySector = {
   composite: ScoreHistoryPoint[]
@@ -35,6 +34,22 @@ const formatChartDate = (date: Date): string => {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
 }
 
+type ChartDotProps = {
+  cx?: number
+  cy?: number
+  payload?: { score: number }
+}
+
+const ScoreDot = ({ cx, cy, payload }: ChartDotProps) => {
+  if (cx === undefined || cy === undefined || !payload) {
+    return null
+  }
+
+  const fill = scoreToOklch(payload.score)
+
+  return <circle cx={cx} cy={cy} r={3} fill={fill} stroke={fill} strokeWidth={1} />
+}
+
 export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProps) => {
   const [sector, setSector] = useState<keyof HistoryBySector>("composite")
 
@@ -53,7 +68,7 @@ export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProp
   const hasEnoughData = chartData.length >= 2
 
   return (
-    <section className="rounded-xl border border-border bg-card p-6">
+    <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Score history
@@ -83,12 +98,8 @@ export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProp
         <div className="h-64 w-full" role="img" aria-label={`${sector} score history chart`}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
               <YAxis domain={[-2, 2]} ticks={[-2, -1, 0, 1, 2]} tick={{ fontSize: 11 }} />
-              <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="4 4" />
-              <ReferenceLine y={1} stroke="var(--chart-1)" strokeOpacity={0.35} />
-              <ReferenceLine y={-1} stroke="var(--destructive)" strokeOpacity={0.35} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "var(--card)",
@@ -111,10 +122,10 @@ export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProp
               <Line
                 type="monotone"
                 dataKey="score"
-                stroke="var(--chart-1)"
+                stroke="var(--score-silver-mid)"
                 strokeWidth={2}
-                dot={{ r: 2, fill: "var(--chart-1)" }}
-                activeDot={{ r: 4 }}
+                dot={<ScoreDot />}
+                activeDot={{ r: 5, stroke: "var(--silver)", strokeWidth: 1 }}
               />
             </LineChart>
           </ResponsiveContainer>

@@ -78,7 +78,7 @@ export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProp
   })()
 
   return (
-    <section className="rounded-xl border border-border bg-card p-6">
+    <section className="surface-card p-6">
       <h2 className="text-lg font-semibold text-foreground">Telegram alerts</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Connect the shared Tripwire bot to receive opportunity alerts on Telegram.

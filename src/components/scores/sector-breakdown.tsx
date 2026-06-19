@@ -1,3 +1,5 @@
+"use client"
+
 import { BreakdownTable } from "@/components/scores/breakdown-table"
 import {
   buildCompositeBreakdownRows,
@@ -26,30 +28,15 @@ export const SectorBreakdown = ({ sector, assetType, components }: SectorBreakdo
   switch (sector) {
     case "macro": {
       const rows = buildMacroBreakdownRows(components, assetType)
-      return (
-        <BreakdownTable
-          rows={rows}
-          footnote="Macro is a weighted blend of market-wide fear/volatility and benchmark RSI."
-        />
-      )
+      return <BreakdownTable rows={rows} columns="full" />
     }
     case "relativity": {
       const rows = buildRelativityBreakdownRows(components)
-      return (
-        <BreakdownTable
-          rows={rows}
-          footnote="Higher score means the asset is relatively weaker vs its benchmark (more oversold)."
-        />
-      )
+      return <BreakdownTable rows={rows} columns="values-only" />
     }
     case "volume": {
       const rows = buildVolumeBreakdownRows(components)
-      return (
-        <BreakdownTable
-          rows={rows}
-          footnote="Volume uses 30 completed weekly candles; in-progress weeks are excluded for stable scores."
-        />
-      )
+      return <BreakdownTable rows={rows} columns="values-only" />
     }
     case "composite": {
       const rows = buildCompositeBreakdownRows(components)

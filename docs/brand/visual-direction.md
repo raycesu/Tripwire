@@ -14,19 +14,26 @@ It aligns UI and brand decisions with the contrarian scoring model.
 - **Background**: charcoal / deep gray
 - **Primary surfaces**: silver-gray neutrals
 - **Primary accent**: alert red
-- **Positive score accent**: cool green
-- **Negative score accent**: red
+- **Score scale**: dark silver (crowded) → light gray (neutral) → red (opportunity)
 - **Neutral score accent**: muted silver
 
 Use strong contrast for readability, especially in dense table/card views.
 
 ## Score Color Semantics
 
-- `+1.5` to `+2.0`: Strong Opportunity (strong green)
-- `+1.0` to `+1.49`: Opportunity (muted green)
-- `-0.49` to `+0.99`: Neutral (silver)
-- `-0.5` to `-0.99`: Caution (muted red)
-- `-1.0` to `-2.0`: Crowded / Overheated (strong red)
+Continuous scale from **-2 to +2**:
+
+- `-2.0`: dark silver (Crowded / Overheated)
+- `0.0`: mid silver (Neutral)
+- `+2.0`: deep red (Strong Opportunity)
+
+Five interpretation bands (labels unchanged):
+
+- `+1.5` to `+2.0`: Strong Opportunity (bright red)
+- `+1.0` to `+1.49`: Opportunity (gray-red tint)
+- `-0.49` to `+0.99`: Neutral (light silver)
+- `-0.5` to `-0.99`: Caution (medium-dark gray)
+- `-1.0` to `-2.0`: Crowded / Overheated (dark silver)
 
 ## Logo Guardrails
 

@@ -153,7 +153,7 @@ export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProp
     <div className="flex flex-col gap-8">
       <form
         onSubmit={handleCreate}
-        className="rounded-xl border border-border bg-card p-6"
+        className="surface-card p-6"
         aria-label="Create alert rule"
       >
         <h2 className="text-lg font-semibold text-foreground">Create alert rule</h2>
@@ -233,7 +233,7 @@ export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProp
         </Button>
       </form>
 
-      <section className="rounded-xl border border-border bg-card p-6">
+      <section className="surface-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Your alert rules</h2>
           <Button
