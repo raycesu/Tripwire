@@ -59,7 +59,7 @@ export const createAlertRule = async (
   const rule = await db.query.alertRules.findFirst({
     where: eq(alertRules.id, created.id),
     with: {
-      asset: { columns: { symbol: true, name: true } },
+      asset: { columns: { symbol: true, name: true, assetType: true } },
     },
   })
 

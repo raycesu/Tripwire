@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildAlertMessage,
   doesRuleMatchSnapshot,
+  parseAlertMessageSectorScores,
   parseSnapshotScore,
   prioritizeAlertRules,
 } from "@/lib/alerts/evaluation"
@@ -74,6 +75,49 @@ describe("prioritizeAlertRules", () => {
     ])
 
     expect(ordered.map((rule) => rule.scope)).toEqual(["composite", "sector", "sector"])
+  })
+})
+
+describe("parseAlertMessageSectorScores", () => {
+  it("parses sector score lines from alert messages", () => {
+    const message = buildAlertMessage({
+      assetSymbol: "CRCL",
+      rule: { scope: "composite", sector: null, operator: "above", threshold: "1.00" },
+      snapshot: baseSnapshot({ sector: "composite", score: "+1.07" }),
+      sectorSnapshots: {
+        macro: baseSnapshot({ sector: "macro", score: "-0.80" }),
+        relativity: baseSnapshot({ sector: "relativity", score: "+2.00" }),
+        volume: baseSnapshot({ sector: "volume", score: "+2.00" }),
+        composite: baseSnapshot({ sector: "composite", score: "+1.07" }),
+      },
+    })
+
+    expect(parseAlertMessageSectorScores(message)).toEqual({
+      composite: 1.07,
+      macro: -0.8,
+      relativity: 2,
+      volume: 2,
+    })
+  })
+
+  it("returns null for missing sector lines", () => {
+    expect(parseAlertMessageSectorScores("Tripwire Alert\n\nNo scores here")).toEqual({
+      composite: null,
+      macro: null,
+      relativity: null,
+      volume: null,
+    })
+  })
+
+  it("returns null for em dash null scores", () => {
+    const message = ["Composite: —", "Macro: —", "Relativity: +1.00", "Volume: —"].join("\n")
+
+    expect(parseAlertMessageSectorScores(message)).toEqual({
+      composite: null,
+      macro: null,
+      relativity: 1,
+      volume: null,
+    })
   })
 })
 

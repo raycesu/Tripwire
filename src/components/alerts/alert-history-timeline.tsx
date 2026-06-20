@@ -1,15 +1,20 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { AlertRulesPagination } from "@/components/alerts/alert-rules-pagination"
 import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
-import { formatScore } from "@/lib/scores/labels"
 import type { AlertEventDto } from "@/lib/alerts/types"
+import { getScoreTextColorClass } from "@/lib/scores/colors"
+import { formatScore } from "@/lib/scores/labels"
+import { cn } from "@/lib/utils"
 
 type AlertHistoryTimelineProps = {
   events: AlertEventDto[]
   assetSymbols: string[]
 }
+
+const PAGE_SIZE = 8
 
 const statusVariant = (
   status: string
@@ -29,16 +34,36 @@ const statusVariant = (
   return "default"
 }
 
+const formatStatusLabel = (status: string): string => {
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+}
+
 const formatEventTime = (date: Date): string => {
   return date.toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   })
 }
 
+type SectorChipProps = {
+  label: string
+  score: number | null
+}
+
+const SectorChip = ({ label, score }: SectorChipProps) => (
+  <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/40 px-3 font-mono text-xs font-medium tabular-nums text-foreground">
+    {label} {score === null ? "—" : formatScore(String(score))}
+  </span>
+)
+
 export const AlertHistoryTimeline = ({ events, assetSymbols }: AlertHistoryTimelineProps) => {
   const [filterSymbol, setFilterSymbol] = useState<string>("all")
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const filteredEvents = useMemo(() => {
     if (filterSymbol === "all") {
@@ -47,6 +72,19 @@ export const AlertHistoryTimeline = ({ events, assetSymbols }: AlertHistoryTimel
 
     return events.filter((event) => event.assetSymbol === filterSymbol)
   }, [events, filterSymbol])
+
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE))
+  const safePage = Math.min(currentPage, totalPages)
+
+  const pageEvents = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE
+    return filteredEvents.slice(start, start + PAGE_SIZE)
+  }, [filteredEvents, safePage])
+
+  const handleFilterChange = (symbol: string) => {
+    setFilterSymbol(symbol)
+    setCurrentPage(1)
+  }
 
   if (events.length === 0) {
     return (
@@ -60,14 +98,14 @@ export const AlertHistoryTimeline = ({ events, assetSymbols }: AlertHistoryTimel
   }
 
   return (
-    <div className="space-y-4">
-      {assetSymbols.length > 1 ? (
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Filter by asset</span>
+    <div>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground">Alert history</h2>
+        {assetSymbols.length > 1 ? (
           <select
             value={filterSymbol}
-            onChange={(event) => setFilterSymbol(event.target.value)}
-            className="rounded-md border border-border bg-muted/40 px-2 py-1 text-foreground"
+            onChange={(event) => handleFilterChange(event.target.value)}
+            className="rounded-md border border-border bg-muted/40 px-2 py-1 text-sm text-foreground"
             aria-label="Filter alert history by asset"
           >
             <option value="all">All assets</option>
@@ -77,54 +115,77 @@ export const AlertHistoryTimeline = ({ events, assetSymbols }: AlertHistoryTimel
               </option>
             ))}
           </select>
-        </label>
-      ) : null}
+        ) : null}
+      </div>
 
-      <ul className="divide-y divide-border" aria-label="Alert delivery history">
-        {filteredEvents.map((event) => {
-          const isExpanded = expandedId === event.id
-          const isLongMessage = event.message.length > 120
+      {filteredEvents.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No alerts for this asset yet.
+        </p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <ul className="min-w-[640px] divide-y divide-border" aria-label="Alert delivery history">
+              {pageEvents.map((event) => {
+                const compositeScore = event.sectorScores.composite ?? event.triggeredValue
+                const eventTime = event.sentAt ?? event.createdAt
 
-          return (
-            <li key={event.id} className="py-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium text-foreground">
-                    {event.assetSymbol} · {event.ruleLabel}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {formatEventTime(event.createdAt)}
-                    {event.sentAt ? ` · sent ${formatEventTime(event.sentAt)}` : null}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm text-foreground">
-                    {formatScore(String(event.triggeredValue))}
-                  </span>
-                  <Badge variant={statusVariant(event.telegramStatus)}>
-                    {event.telegramStatus.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {isExpanded || !isLongMessage ? event.message : `${event.message.slice(0, 120)}…`}
-              </p>
-              {isLongMessage ? (
-                <button
-                  type="button"
-                  onClick={() => setExpandedId(isExpanded ? null : event.id)}
-                  className="mt-1 text-xs text-foreground underline-offset-4 hover:underline"
-                >
-                  {isExpanded ? "Show less" : "Show full message"}
-                </button>
-              ) : null}
-              {event.telegramError ? (
-                <p className="mt-1 text-xs text-destructive">{event.telegramError}</p>
-              ) : null}
-            </li>
-          )
-        })}
-      </ul>
+                return (
+                  <li key={event.id} className="py-3">
+                    <div className="flex items-stretch gap-4">
+                      <div className="flex min-w-[100px] shrink-0 flex-col justify-center">
+                        <p className="font-medium text-foreground">{event.assetSymbol}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {formatEventTime(eventTime)}
+                        </p>
+                      </div>
+
+                      <div className="flex w-16 shrink-0 items-center">
+                        <span
+                          className={cn(
+                            "font-mono text-sm font-medium tabular-nums",
+                            getScoreTextColorClass(compositeScore)
+                          )}
+                        >
+                          {formatScore(String(compositeScore))}
+                        </span>
+                      </div>
+
+                      <div className="flex min-w-0 flex-1 items-stretch gap-2">
+                        <SectorChip label="Macro" score={event.sectorScores.macro} />
+                        <SectorChip label="Relativity" score={event.sectorScores.relativity} />
+                        <SectorChip label="Volume" score={event.sectorScores.volume} />
+                      </div>
+
+                      <div className="flex shrink-0 items-center">
+                        <Badge
+                          variant={statusVariant(event.telegramStatus)}
+                          className="rounded-full px-1.5 py-0 text-[10px]"
+                        >
+                          {formatStatusLabel(event.telegramStatus)}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {event.telegramError ? (
+                      <p className="mt-1 text-xs text-destructive">{event.telegramError}</p>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          <AlertRulesPagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            totalItems={filteredEvents.length}
+            pageSize={PAGE_SIZE}
+            itemLabel=""
+            onPageChange={setCurrentPage}
+          />
+        </>
+      )}
     </div>
   )
 }

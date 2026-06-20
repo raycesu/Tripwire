@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { AlertHistoryTimeline } from "@/components/alerts/alert-history-timeline"
 import { AlertRulesPanel } from "@/components/alerts/alert-rules-panel"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
@@ -24,25 +23,9 @@ export default async function AlertsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
-      <div>
-        <h1 className="text-3xl font-semibold text-metallic">Alerts</h1>
-        <p className="mt-1 text-muted-foreground">
-          Define threshold rules and receive Telegram notifications when fresh scores qualify.
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          <Link href="/settings" className="text-foreground underline-offset-4 hover:underline">
-            Connect Telegram in Settings
-          </Link>{" "}
-          before expecting delivery.
-        </p>
-      </div>
-
       <AlertRulesPanel initialRules={rules.map(toAlertRuleDto)} watchlist={watchlistOptions} />
 
-      <section className="surface-card p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Alert history
-        </h2>
+      <section>
         <AlertHistoryTimeline events={alertEvents} assetSymbols={assetSymbols} />
       </section>
     </main>

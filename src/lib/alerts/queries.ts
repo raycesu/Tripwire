@@ -2,6 +2,7 @@ import { and, desc, eq, gte, inArray, or, sql } from "drizzle-orm"
 import { db } from "@/db/client"
 import { alertEvents, alertRules, scoreSnapshots } from "@/db/schema"
 import type { AlertEventDto, AlertRuleWithAsset } from "@/lib/alerts/types"
+import { parseAlertMessageSectorScores } from "@/lib/alerts/evaluation"
 import { formatRuleLabel } from "@/lib/alerts/types"
 import type { ScoreSnapshotRecord } from "@/lib/scores/snapshots"
 import { getLatestSectorSnapshots } from "@/lib/scores/snapshots"
@@ -21,7 +22,7 @@ export const listAlertEventsForUser = async (
     with: {
       alertRule: true,
       asset: {
-        columns: { symbol: true, name: true },
+        columns: { symbol: true, name: true, assetType: true },
       },
     },
   })
@@ -40,6 +41,7 @@ export const listAlertEventsForUser = async (
         threshold: Number(rule.threshold),
       }),
       triggeredValue: Number(row.triggeredValue),
+      sectorScores: parseAlertMessageSectorScores(row.message),
       message: row.message,
       telegramStatus: row.telegramStatus,
       telegramError: row.telegramError,
@@ -63,7 +65,7 @@ export const listAlertRulesForUser = async (userId: string): Promise<AlertRuleWi
     where: eq(alertRules.userId, userId),
     with: {
       asset: {
-        columns: { symbol: true, name: true },
+        columns: { symbol: true, name: true, assetType: true },
       },
     },
     orderBy: [desc(alertRules.createdAt)],
@@ -80,7 +82,7 @@ export const getAlertRuleForUser = async (
     where: and(eq(alertRules.id, ruleId), eq(alertRules.userId, userId)),
     with: {
       asset: {
-        columns: { symbol: true, name: true },
+        columns: { symbol: true, name: true, assetType: true },
       },
     },
   })
@@ -169,7 +171,7 @@ export const listEnabledRulesForSnapshots = async (
     where: and(eq(alertRules.isEnabled, true), inArray(alertRules.assetId, snapshotAssetIds)),
     with: {
       asset: {
-        columns: { symbol: true, name: true },
+        columns: { symbol: true, name: true, assetType: true },
       },
     },
   })
@@ -182,7 +184,7 @@ export const listEnabledAlertRules = async (): Promise<AlertRuleWithAsset[]> => 
     where: eq(alertRules.isEnabled, true),
     with: {
       asset: {
-        columns: { symbol: true, name: true },
+        columns: { symbol: true, name: true, assetType: true },
       },
     },
   })
@@ -217,7 +219,7 @@ export const listRetryableAlertEvents = async (input: {
       alertRule: {
         with: {
           asset: {
-            columns: { symbol: true, name: true },
+            columns: { symbol: true, name: true, assetType: true },
           },
         },
       },

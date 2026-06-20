@@ -108,3 +108,34 @@ export const buildAlertMessage = (input: BuildAlertMessageInput): string => {
     `Reason: Your alert rule "${ruleLabel}" matched the latest score update.`,
   ].join("\n")
 }
+
+export type AlertMessageSectorScores = {
+  composite: number | null
+  macro: number | null
+  relativity: number | null
+  volume: number | null
+}
+
+const parseAlertMessageScoreLine = (message: string, label: string): number | null => {
+  const regex = new RegExp(`^${label}:\\s*(.+)$`, "m")
+  const match = message.match(regex)
+
+  if (!match) {
+    return null
+  }
+
+  const value = match[1].trim()
+
+  if (value === "—" || value === "-") {
+    return null
+  }
+
+  return parseSnapshotScore(value)
+}
+
+export const parseAlertMessageSectorScores = (message: string): AlertMessageSectorScores => ({
+  composite: parseAlertMessageScoreLine(message, "Composite"),
+  macro: parseAlertMessageScoreLine(message, "Macro"),
+  relativity: parseAlertMessageScoreLine(message, "Relativity"),
+  volume: parseAlertMessageScoreLine(message, "Volume"),
+})
