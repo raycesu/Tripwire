@@ -150,6 +150,16 @@
   html {
     @apply font-sans;
   }
+
+  html.landing-active,
+  html.landing-active body,
+  html.auth-active,
+  html.auth-active body {
+    height: 100%;
+    min-height: 100dvh;
+    overflow: hidden;
+    background-color: oklch(0.06 0 0);
+  }
 }
 
 @layer utilities {
