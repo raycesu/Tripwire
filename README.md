@@ -6,11 +6,14 @@ Personal asset score machine for crypto and equities. Tripwire scores your watch
 
 ## Features
 
-- **Watchlist** — Search and add crypto (Binance USDT pairs) and stocks from a catalog of 100k+ symbols (Binance + Twelve Data), synced on a schedule.
+- **Marketing homepage** — Public landing page at `/` with product positioning; signed-in users are redirected to the dashboard.
+- **Branded auth** — Custom Clerk sign-in and sign-up pages at `/sign-in` and `/sign-up` with Tripwire styling.
+- **Watchlist** — Card grid with composite speedometers and expandable sector score tubes; add assets from a header dialog that searches the synced catalog.
+- **Asset catalog** — Crypto from Binance US and Kraken (`<BASE>USDT` pairs); US-listed stocks from NYSE, NASDAQ, and BATS (Twelve Data), synced on a schedule.
 - **Three sector scores** — Macro, Relativity, and Volume, each from `-2` to `+2`, with component breakdowns stored for the UI.
 - **Composite score** — Average of all three sectors when each is valid, non-null, and non-stale; otherwise null with a clear reason.
-- **Asset detail** — Per-symbol score history, sector panels, freshness badges, and unsupported-asset explanations.
-- **Alert rules** — Level-based thresholds on composite or individual sectors; initial-match alerts when a new rule already qualifies.
+- **Asset detail** — TradingView price chart, Recharts score history by sector, freshness badges, and unsupported-asset explanations.
+- **Alert rules** — Level-based thresholds on composite or individual sectors; table UI with search, filters, pagination, bulk enable/disable/delete, and create/edit dialogs; initial-match alerts when a new rule already qualifies.
 - **Telegram** — One shared Tripwire bot; connect via short-lived connect code and deep link; delivery caps and duplicate prevention built in.
 - **Scheduled jobs** — [cron-job.org](https://cron-job.org) triggers protected Vercel API routes for daily/weekly scoring, alert evaluation, and catalog sync.
 - **Observability** — `scheduled_job_runs` logs job outcomes; `/api/health` checks Neon connectivity.
@@ -26,7 +29,7 @@ Personal asset score machine for crypto and equities. Tripwire scores your watch
 
 **Freshness:** daily sectors stale after 36 hours; weekly sectors stale after 8 days.
 
-**Providers:** Binance Global → Binance US fallback for crypto OHLCV (`<BASE>USDT` only); Twelve Data for stocks; FRED for macro; Alternative.me for Fear & Greed. Provider responses are cached where practical.
+**Providers:** Binance US → Kraken fallback for crypto OHLCV and catalog resolution (`<BASE>USDT` only); Twelve Data for US exchange stocks (rate-limited and deduplicated); FRED for macro; Alternative.me for Fear & Greed. Provider responses are cached where practical.
 
 Scoring logic lives under `src/scoring/` and `src/jobs/`—not in React components or page loaders.
 
@@ -40,7 +43,7 @@ Scoring logic lives under `src/scoring/` and `src/jobs/`—not in React componen
 | Database | Neon Postgres |
 | ORM | Drizzle |
 | Validation | Zod |
-| Charts | Recharts |
+| Charts | Recharts (score history), TradingView embed (price charts) |
 | Tests | Vitest |
 | Deploy | Vercel |
 | Cron | cron-job.org → protected `/api/cron/*` routes |
@@ -50,11 +53,11 @@ Scoring logic lives under `src/scoring/` and `src/jobs/`—not in React componen
 ```txt
 src/
   app/              # Routes, API handlers, dashboard pages
-  components/       # UI (scores, watchlist, alerts, settings)
+  components/       # UI (scores, watchlist, alerts, marketing, auth)
   db/               # Drizzle schema, migrations, seed
   jobs/             # Daily/weekly scoring and alert evaluation
   lib/              # Auth, queries, alerts, rate limits, logging
-  providers/        # Binance, Twelve Data, FRED, Telegram, cache
+  providers/        # Binance US, Kraken, Twelve Data, FRED, Telegram, cache
   scoring/          # Pure sector formulas and indicators
   scripts/          # CLI: catalog sync, asset resolve, manual scores
 docs/               # Cron setup, security, brand direction
@@ -100,12 +103,12 @@ npm run db:seed       # optional MVP seed assets (BTC, ETH, etc.)
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — the root route redirects to `/dashboard` (Clerk sign-in required).
+Open [http://localhost:3000](http://localhost:3000) — the public landing page links to `/sign-up`; protected routes require Clerk sign-in.
 
 ### 5. Optional: resolve catalog assets and run scores locally
 
 ```bash
-npm run catalog:sync          # sync Binance + Twelve Data catalog
+npm run catalog:sync          # sync Binance US, Kraken, and US stock catalog
 npm run assets:resolve        # resolve provider symbols for assets
 npm run scores:run -- --daily # manual daily scoring job
 npm run scores:run -- --weekly
@@ -128,18 +131,25 @@ curl -X POST \
 | `DATABASE_URL` | Yes | Neon Postgres connection string |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk (public) |
 | `CLERK_SECRET_KEY` | Yes | Clerk (server) |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Yes* | Clerk sign-in path (default `/sign-in`) |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Yes* | Clerk sign-up path (default `/sign-up`) |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | Yes* | Post sign-in redirect (default `/dashboard`) |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | Yes* | Post sign-up redirect (default `/dashboard`) |
 | `CRON_SECRET` | Yes | Authenticates `/api/cron/*` routes |
 | `TELEGRAM_BOT_TOKEN` | Yes | Shared Tripwire bot (server only) |
 | `TELEGRAM_BOT_USERNAME` | Yes | Bot username for connect deep links |
 | `TELEGRAM_WEBHOOK_SECRET` | Yes | Validates Telegram webhook requests |
 | `FRED_API_KEY` | Yes | VIX and S&P 500 macro data |
-| `TWELVE_DATA_API_KEY` | Yes | Stock OHLCV and catalog |
+| `TWELVE_DATA_API_KEY` | Yes | Stock OHLCV and US exchange catalog |
+| `TWELVE_DATA_MAX_CALLS_PER_MINUTE` | No | Twelve Data request throttle; default `7` |
 | `MAX_ALERTS_PER_USER_PER_RUN` | No | Default `10` |
 | `MAX_TELEGRAM_MESSAGES_PER_MINUTE` | No | Default `20` |
 | `PROVIDER_FETCH_MAX_RETRIES` | No | Default `3` |
 | `PROVIDER_FETCH_TIMEOUT_MS` | No | Default `15000` |
 
 Never commit `.env.local` or expose provider keys, `CRON_SECRET`, or `TELEGRAM_BOT_TOKEN` to the client.
+
+\*Clerk routing URLs are read by Clerk at runtime; defaults are in `.env.example`.
 
 ## npm scripts
 
@@ -154,7 +164,7 @@ Never commit `.env.local` or expose provider keys, `CRON_SECRET`, or `TELEGRAM_B
 | `npm run db:migrate` | Apply migrations |
 | `npm run db:push` | Push schema directly (dev only) |
 | `npm run db:seed` | Seed starter assets |
-| `npm run catalog:sync` | Sync searchable asset catalog |
+| `npm run catalog:sync` | Sync crypto (Binance US + Kraken) and US stock catalog |
 | `npm run assets:resolve` | Resolve provider symbols for assets |
 | `npm run scores:run` | Run scoring jobs manually (`--daily`, `--weekly`, `--all`) |
 | `npm run verify:market-data` | Verify external market data providers |
@@ -163,17 +173,18 @@ Never commit `.env.local` or expose provider keys, `CRON_SECRET`, or `TELEGRAM_B
 
 | Path | Description |
 | --- | --- |
-| `/dashboard` | Watchlist scores, last job run summary |
-| `/assets` | Browse/search catalog, add to watchlist |
-| `/assets/[symbol]` | Asset detail, sector breakdowns, history |
-| `/alerts` | Alert rules and delivery history |
+| `/` | Public marketing landing page (redirects to `/dashboard` when signed in) |
+| `/sign-in`, `/sign-up` | Branded Clerk authentication |
+| `/dashboard` | Watchlist card grid with composite speedometers and sector score tubes |
+| `/assets/[symbol]` | Asset detail: TradingView chart, score history, watchlist toggle |
+| `/alerts` | Alert rules table (search, filters, bulk actions) and delivery history |
 | `/settings` | Telegram connection |
 
-Protected by Clerk middleware (`/dashboard`, `/assets`, `/alerts`, `/settings`).
+Protected by Clerk middleware (`/dashboard`, `/assets/[symbol]`, `/alerts`, `/settings`).
 
 ## API overview
 
-**Authenticated (user-scoped):** watchlist CRUD, asset search, alert rules CRUD/export, Telegram connect and test.
+**Authenticated (user-scoped):** watchlist CRUD, asset search, alert rules CRUD, Telegram connect and test.
 
 **Cron ( `CRON_SECRET` ):** `POST /api/cron/score-daily`, `score-weekly`, `evaluate-alerts`, `sync-asset-catalog`.
 
@@ -201,7 +212,7 @@ Recommended UTC schedules (see docs for details):
 npm test
 ```
 
-Covers scoring formulas, composite/staleness rules, alert evaluation and caps, cron auth, provider HTTP helpers, catalog queries, and integration flows. Scoring and alert logic are kept in pure/testable modules under `src/scoring/` and `src/lib/alerts/`.
+Covers scoring formulas, composite/staleness rules, alert evaluation and caps, cron auth, provider HTTP helpers, catalog queries, TradingView symbol mapping, and integration flows. Scoring and alert logic are kept in pure/testable modules under `src/scoring/` and `src/lib/alerts/`.
 
 ## Documentation
 
@@ -211,7 +222,7 @@ Covers scoring formulas, composite/staleness rules, alert evaluation and caps, c
 | [docs/cron-setup.md](docs/cron-setup.md) | cron-job.org jobs, auth, smoke tests |
 | [docs/security.md](docs/security.md) | Secrets, logging redaction, rate limits |
 | [docs/telegram-security.md](docs/telegram-security.md) | Bot token rotation |
-| [docs/brand/visual-direction.md](docs/brand/visual-direction.md) | UI theme and tone |
+| [docs/brand/visual-direction.md](docs/brand/visual-direction.md) | Dark ops dashboard theme, score color scale, logo guardrails |
 
 ## Security notes
 

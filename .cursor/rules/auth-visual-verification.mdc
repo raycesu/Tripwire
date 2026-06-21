@@ -15,14 +15,13 @@ This project uses Clerk. Agent Playwright sessions start unsigned-in, so protect
 Protected routes (see `src/middleware.ts`):
 
 - `/dashboard` and nested paths
-- `/assets` and `/assets/[symbol]`
+- `/assets/[symbol]` (asset detail; there is no standalone `/assets` browse page)
 - `/alerts`
 - `/settings`
-- Clerk sign-in / sign-up flows tied to those areas
 
 ## Allowed Playwright Use
 
-- Public pages such as the marketing home page (`/`) when a quick visual check helps.
+- Public pages: marketing home (`/`), Clerk sign-in (`/sign-in`), and sign-up (`/sign-up`) when a quick visual check helps.
 - Explicit user request to debug auth, sign-in, or session setup with provided credentials or state.
 
 ## How To Verify Protected UI Instead

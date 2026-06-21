@@ -9,7 +9,7 @@ alwaysApply: true
 
 ## Project Identity
 
-Tripwire is a personal asset score machine. Users sign in, add crypto and stock assets to a watchlist, define score threshold alerts, and receive Telegram notifications when fresh score updates qualify.
+Tripwire is a personal asset score machine. Users sign in from branded auth pages, add crypto and stock assets to a watchlist via the header Add assets dialog, define score threshold alerts, and receive Telegram notifications when fresh score updates qualify.
 
 The product is a contrarian opportunity detector:
 
@@ -52,9 +52,9 @@ src/
   components/
   db/
   lib/
-    scoring/
-    providers/
-    jobs/
+  scoring/
+  providers/
+  jobs/
 ```
 
 Rules:
@@ -92,7 +92,8 @@ Never silently ignore null/stale data. Store `is_null`, `null_reason`, `is_stale
 
 Clerk is the auth source of truth.
 
-- Protect dashboard, watchlist, alerts, and settings routes.
+- Public marketing landing at `/`; branded Clerk auth at `/sign-in` and `/sign-up`.
+- Protect dashboard, asset detail, alerts, and settings routes.
 - Never trust client-provided `user_id`.
 - Always derive the current user from Clerk server auth.
 - User data must be scoped by the authenticated user.
@@ -136,17 +137,18 @@ Volume:
 
 ## Provider Rules
 
-Crypto OHLCV:
+Crypto OHLCV and catalog resolution:
 
-- Try Binance Global first.
-- Fall back to Binance US.
+- Try Binance US first.
+- Fall back to Kraken for `<BASE>USDT` pairs.
 - Use `<BASE>USDT` pairs only for MVP.
 - If neither provider has the pair, mark unsupported with a clear reason.
 - Do not silently fall back to futures, `BTC`, `USDC`, or `USD` pairs.
 
 Stocks:
 
-- Use the chosen free stock OHLCV provider after validation.
+- Use Twelve Data for US exchange OHLCV and catalog sync (NYSE, NASDAQ, BATS).
+- Deduplicate tickers across exchanges and respect `TWELVE_DATA_MAX_CALLS_PER_MINUTE`.
 - Use FRED for VIX and S&P 500 macro data.
 - Market holidays should use the last available trading day of the week.
 
@@ -215,12 +217,16 @@ Preferred labels:
 
 Show:
 
-- Score value
+- Score value and interpretation label
+- Composite speedometers and expandable sector score tubes on the watchlist
+- TradingView price chart and Recharts score history on asset detail
 - Included sectors
 - Stale/null badges
 - Component breakdowns
 - Last computed time
 - Clear unsupported asset reasons
+
+Visual direction: dark operational dashboard with silver neutrals and red opportunity accents (see `docs/brand/visual-direction.md`). Positive opportunity uses red tones, not generic green bullishness.
 
 Avoid making the UI say simply "bullish" or "bearish" as the primary interpretation.
 

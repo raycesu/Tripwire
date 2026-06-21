@@ -14,9 +14,10 @@ The original MVP seed set was:
 
 **Current product scope**
 
-- Searchable catalog synced from Binance Global/US active `USDT` spot pairs and Twelve Data common stocks
-- Users discover assets via typeahead search on `/assets`, open detail pages, then add to watchlist
+- Searchable catalog synced from Binance US and Kraken active `USDT` spot pairs plus US-listed stocks (NYSE, NASDAQ, BATS) from Twelve Data
+- Users discover assets via the header Add assets dialog on `/dashboard`, open detail pages at `/assets/[symbol]`, then add to watchlist
 - Operational `assets` rows are created lazily when a supported catalog symbol is opened
+- Public marketing landing at `/`; branded Clerk auth at `/sign-in` and `/sign-up`
 
 **Rationale (original MVP)**
 - Kept early scoring engine work focused with a high-signal starter set across crypto and equities
@@ -80,6 +81,8 @@ The following must be in place before Phase 1 can be considered complete:
   - Maps to Phase 1 deliverable: env validation
 - [ ] Baseline dashboard shell route exists behind auth
   - Maps to Phase 1 deliverable: base dashboard shell
+- [ ] Public landing page and branded Clerk auth routes exist
+  - Maps to Phase 1 deliverable: marketing and auth entry points
 - [ ] Dark charcoal/silver/red theme tokens defined and applied to shell primitives
   - Maps to Phase 1 deliverable: theme tokens
 

@@ -22,8 +22,8 @@ The final asset score (composite) is the average of Macro, Relativity, and Volum
 
 The core user workflow:
 
-1. User signs in.
-2. User adds assets to a personal watchlist.
+1. User visits the public landing page or signs in at `/sign-in`.
+2. User adds assets to a personal watchlist from the header Add assets dialog.
 3. Tripwire computes sector scores and final scores for each watched asset.
 4. User defines alert rules.
 5. Tripwire sends Telegram alerts when rules are triggered.
@@ -40,7 +40,7 @@ The core user workflow:
 - Database: Neon Postgres
 - ORM: Drizzle ORM
 - Validation: Zod
-- Charts: Recharts or Tremor charts
+- Charts: Recharts for score history; TradingView embed for price charts
 - Job scheduling: cron-job.org calling protected Vercel API routes
 - Background job upgrade path: Inngest, Trigger.dev, or QStash if scoring runs become too long for Vercel Functions
 
@@ -67,8 +67,7 @@ Theme:
 - Background: charcoal / dark grey
 - Primary material feel: silver / grey
 - Accent: alert red
-- Positive score accent: cool green
-- Negative score accent: red
+- Score scale: dark silver (crowded) → light gray (neutral) → red (opportunity)
 - Neutral: muted silver
 
 Logo direction:
@@ -80,9 +79,10 @@ Logo direction:
 
 UI tone:
 
-- Dark operational dashboard, not a marketing landing page.
+- Public marketing landing at `/` for unsigned visitors; dark operational dashboard after sign-in.
 - Dense enough for repeated monitoring.
-- Use compact score chips, sector accordions, threshold controls, and clear alert status.
+- Watchlist card grid with composite speedometers and expandable sector score tubes.
+- Compact score chips, threshold controls, and clear alert status.
 
 ## 4. Core Data Model
 
@@ -112,8 +112,9 @@ Fields:
 - `name`
 - `asset_type`: `crypto` or `stock`
 - `provider_symbol`
-- `provider_name`: selected market-data provider, such as `binance_global`, `binance_us`, or `twelve_data`
+- `provider_name`: selected market-data provider, such as `binance_us`, `kraken`, or `twelve_data`
 - `quote_asset`: default `USDT` for crypto
+- `exchange`: US listing exchange for stocks (for example `NYSE`, `NASDAQ`, `BATS`)
 - `benchmark_symbol`
 - `resolution_status`: `resolved`, `unsupported`, or `needs_review`
 - `unsupported_reason`
@@ -298,46 +299,54 @@ Recommended folder structure:
 ```txt
 src/
   app/
+    page.tsx
+    sign-in/
+    sign-up/
     (dashboard)/
       dashboard/
-      assets/
+      assets/[symbol]/
       alerts/
       settings/
     api/
       cron/
         score-daily/
         score-weekly/
-        alerts/
+        evaluate-alerts/
+        sync-asset-catalog/
       telegram/
         webhook/
   components/
     app-shell/
     assets/
+    auth/
+    marketing/
     scores/
     alerts/
   db/
     schema.ts
     client.ts
     migrations/
+  scoring/
+    composite.ts
+    macro.ts
+    relativity.ts
+    volume.ts
+    indicators.ts
+  providers/
+    binance-us.ts
+    kraken.ts
+    fred.ts
+    twelve-data.ts
+    telegram.ts
+  jobs/
+    run-daily-scores.ts
+    run-weekly-scores.ts
+    evaluate-alerts.ts
   lib/
     auth/
-    scoring/
-      composite.ts
-      macro.ts
-      relativity.ts
-      volume.ts
-      indicators.ts
-    providers/
-      binance.ts
-      binance-us.ts
-      coingecko.ts
-      fred.ts
-      twelve-data.ts
-      telegram.ts
-    jobs/
-      run-daily-scores.ts
-      run-weekly-scores.ts
-      evaluate-alerts.ts
+    alerts/
+    assets/
+    scores/
 ```
 
 Scoring principles:
@@ -510,8 +519,8 @@ Inputs:
 - 30 weekly OHLCV candles.
 - Exclude in-progress weekly candles for stable production scores.
 - Index convention: `0` is oldest candle and `29` is the most recent completed weekly candle.
-- Crypto source: Binance weekly klines.
-- Equity source: Twelve Data weekly candles if the free tier supports the needed interval.
+- Crypto source: Binance US or Kraken weekly klines.
+- Equity source: Twelve Data weekly candles for US exchange listings.
 
 Components:
 
@@ -815,50 +824,53 @@ Implementation notes:
 
 ### Main Views
 
-Dashboard:
+Public landing (`/`):
 
-- Watchlist overview.
-- Current composite score per asset.
-- Last updated time.
-- Active alert count.
-- Quick status for each sector.
+- Marketing hero and product positioning for unsigned visitors.
+- Signed-in users redirect to `/dashboard`.
 
-Asset Detail:
+Auth (`/sign-in`, `/sign-up`):
 
-- Header with asset name, symbol, current composite score, and score interpretation.
-- Sector score row:
-  - Macro
-  - Relativity
-  - Volume
-- Each sector opens into a breakdown accordion.
-- Show component values, weights, source, and last computed time.
-- Show score history chart.
+- Branded Clerk pages with Tripwire styling.
+- Post-auth redirect to `/dashboard`.
 
-Alerts:
+Dashboard (`/dashboard`):
 
-- List all alert rules.
-- Create/edit alert rule modal.
+- Watchlist card grid with composite speedometers.
+- Expandable sector score tubes for Macro, Relativity, and Volume.
+- Header Add assets dialog for catalog search and add-to-watchlist flow.
+- Empty state when no assets are on the watchlist.
+
+Asset Detail (`/assets/[symbol]`):
+
+- TradingView embedded price chart.
+- Recharts score history by sector (composite, Macro, Relativity, Volume).
+- Watchlist toggle.
+- Freshness badges and unsupported-asset explanations when applicable.
+
+Alerts (`/alerts`):
+
+- Alert rules table with search, asset-type filters, and pagination.
+- Bulk enable, disable, and delete actions.
+- Create and edit rule dialogs.
 - Threshold controls for composite or sector.
-- Operator selector.
-- Cooldown selector.
-- Test Telegram alert button.
+- Alert delivery history timeline.
 
-Settings:
+Settings (`/settings`):
 
 - Connect Telegram.
 - Chat ID verification.
 - Test message.
-- API key status for providers needed by the user.
 
 ### Score Presentation
 
-Use consistent score colors:
+Use consistent score colors (see `docs/brand/visual-direction.md`):
 
-- `+1.5` to `+2`: strong green
-- `+1.0` to `+1.49`: muted green
-- `-0.49` to `+0.99`: silver / neutral
-- `-0.5` to `-0.99`: muted red
-- `-1.0` to `-2`: strong red
+- `+1.5` to `+2`: bright red (Strong Opportunity)
+- `+1.0` to `+1.49`: gray-red tint (Opportunity)
+- `-0.49` to `+0.99`: light silver (Neutral)
+- `-0.5` to `-0.99`: medium-dark gray (Caution)
+- `-1.0` to `-2`: dark silver (Crowded / Overheated)
 
 Because Tripwire is a buy-opportunity detector, positive means more attractive / oversold. Make that clear in the UI labels.
 
@@ -889,11 +901,11 @@ Initial crypto assets:
 
 | Asset | Display symbol | Provider symbol target |
 | --- | --- | --- |
-| Bitcoin | `BTC` | `BTCUSDT` on Binance |
-| Ethereum | `ETH` | `ETHUSDT` on Binance |
-| Solana | `SOL` | `SOLUSDT` on Binance |
-| Hyperliquid | `HYPE` | `HYPEUSDT` on Binance if available; otherwise mark unsupported until a free OHLCV source is chosen |
-| Zcash | `ZEC` | `ZECUSDT` on Binance |
+| Bitcoin | `BTC` | `BTCUSDT` on Binance US or Kraken |
+| Ethereum | `ETH` | `ETHUSDT` on Binance US or Kraken |
+| Solana | `SOL` | `SOLUSDT` on Binance US or Kraken |
+| Hyperliquid | `HYPE` | `HYPEUSDT` on Binance US or Kraken if available; otherwise mark unsupported |
+| Zcash | `ZEC` | `ZECUSDT` on Binance US or Kraken |
 
 Initial stock assets:
 
@@ -910,26 +922,26 @@ Implementation note:
 - Users can add more assets later only after provider validation confirms the app can fetch enough data.
 - If an asset cannot be mapped to a free provider, show a clear unsupported reason instead of failing silently.
 
-Crypto OHLCV:
+Crypto OHLCV and catalog:
 
-- Primary: Binance Global public REST API for weekly candles.
-- Fallback: Binance US public REST API for weekly candles if Binance Global does not list the needed `USDT` pair.
-- Both providers should use public market-data endpoints only; no API key should be required for OHLCV.
+- Primary: Binance US public REST API for weekly candles and active `USDT` spot catalog entries.
+- Fallback: Kraken public REST API for weekly candles when Binance US does not list the needed `USDT` pair.
+- Both providers should use public market-data endpoints only; no API key should be required for crypto OHLCV.
 
 Crypto symbol resolution:
 
 1. Normalize the user input to an uppercase base asset symbol, such as `SOL`.
 2. Build the preferred quote pair as `<BASE>USDT`, such as `SOLUSDT`.
-3. Query Binance Global exchange info and check whether the symbol exists and is actively tradable.
+3. Query Binance US exchange info and check whether the symbol exists and is actively tradable.
 4. If found, store:
-   - `provider_name = "binance_global"`
+   - `provider_name = "binance_us"`
    - `provider_symbol = "<BASE>USDT"`
    - `quote_asset = "USDT"`
    - `resolution_status = "resolved"`
-5. If not found, query Binance US exchange info for the same `<BASE>USDT` pair.
-6. If found on Binance US, store:
-   - `provider_name = "binance_us"`
-   - `provider_symbol = "<BASE>USDT"`
+5. If not found, query Kraken for an equivalent active `USDT` pair.
+6. If found on Kraken, store:
+   - `provider_name = "kraken"`
+   - `provider_symbol = "<KRAKEN_PAIR>"`
    - `quote_asset = "USDT"`
    - `resolution_status = "resolved"`
 7. If neither provider supports the pair, mark the asset unsupported with a clear reason.
@@ -939,37 +951,41 @@ Resolution pseudocode:
 ```txt
 candidate = `${baseSymbol}USDT`
 
-if binanceGlobal.exchangeInfo.hasActiveSymbol(candidate):
-  return { provider: "binance_global", symbol: candidate }
-
 if binanceUS.exchangeInfo.hasActiveSymbol(candidate):
   return { provider: "binance_us", symbol: candidate }
+
+krakenPair = kraken.resolveUsdtPair(baseSymbol)
+if krakenPair:
+  return { provider: "kraken", symbol: krakenPair.providerSymbol }
 
 return {
   provider: null,
   symbol: null,
   status: "unsupported",
-  reason: "No Binance Global or Binance US USDT pair found"
+  reason: "No Binance US or Kraken USDT pair found"
 }
 ```
 
 Crypto OHLCV fetch:
 
-- If `provider_name = "binance_global"`, fetch klines from Binance Global.
-- If `provider_name = "binance_us"`, fetch klines from Binance US.
+- If `provider_name = "binance_us"`, fetch klines from Binance US; on failure, try Kraken for the same base symbol.
+- If `provider_name = "kraken"`, fetch klines from Kraken.
+- Legacy rows with `provider_name = "binance_global"` should still fetch through the Binance US → Kraken fallback path during migration.
 - Use `interval=1w` and the required `limit` for the sector.
-- Normalize both provider responses into the same internal candle shape.
+- Normalize provider responses into the same internal candle shape.
 - Store the selected provider and symbol in `source_metadata_json` on every score snapshot.
 
-Equity OHLCV:
+Equity OHLCV and catalog:
 
-- Twelve Data for stock weekly candles, if free tier supports the needed weekly interval.
+- Twelve Data for US exchange stock weekly candles and catalog sync.
+- Restrict stock catalog to NYSE, NASDAQ, and BATS listings; deduplicate tickers across exchanges.
+- Throttle Twelve Data requests with `TWELVE_DATA_MAX_CALLS_PER_MINUTE` (default `7`).
 - FRED for VIX and S&P 500 macro data.
 
 Macro:
 
 - Alternative.me Fear & Greed Index.
-- CoinGecko or Binance for BTC closes.
+- BTC weekly RSI from Binance US or Kraken OHLCV.
 - FRED for VIX and S&P 500.
 
 Telegram:
@@ -979,15 +995,15 @@ Telegram:
 Provider open questions:
 
 - Confirm Twelve Data weekly equity support on the free tier before building stock relativity and stock volume.
-- Confirm CoinGecko free OHLC limits and whether Binance can replace it for BTC RSI to reduce provider count.
 - Because MVP includes both crypto and stocks, confirm the free stock-data path early before building the scoring engine around it.
 
 Provider and data edge cases:
 
-- If a crypto asset does not have a Binance Global or Binance US `USDT` pair, mark it unsupported instead of guessing another pair.
+- If a crypto asset does not have a Binance US or Kraken `USDT` pair, mark it unsupported instead of guessing another pair.
 - Do not silently fall back to `USDC`, `USD`, `BTC`, or perpetual futures pairs in the MVP.
-- If a symbol exists on both Binance Global and Binance US, prefer Binance Global for consistency and broader coverage.
+- Prefer Binance US over Kraken when both providers support the same base symbol.
 - Cache exchange-info responses so symbol resolution does not call provider metadata endpoints repeatedly.
+- Throttle and deduplicate Twelve Data catalog and OHLCV requests to stay within free-tier limits.
 - If a stock provider cannot return enough weekly candles, return null for the affected sector with `null_reason = "insufficient_candles"`.
 - If a provider fails for one asset, continue scoring the rest of the watchlist.
 - If market data has missing candles, sort by timestamp, deduplicate, and validate minimum candle count before scoring.
@@ -1026,7 +1042,7 @@ Deliverables:
 - Configure Clerk.
 - Configure Neon and Drizzle.
 - Add environment variable validation.
-- Create base dashboard shell.
+- Create base dashboard shell, public landing page, and branded Clerk auth pages.
 - Add dark charcoal/silver/red theme tokens.
 
 Acceptance criteria:
@@ -1051,19 +1067,19 @@ Acceptance criteria:
 - User can add BTC, ETH, SOL, HYPE, ZEC, MSTR, TSLA, NVDA, COIN, and other provider-validated supported assets.
 - Watchlist persists per user.
 - Removing an asset from the watchlist disables or archives that user's alert rules for the asset.
-- Asset list and asset detail pages load from Neon.
+- Asset detail pages and watchlist dashboard load from Neon.
 
 ### Phase 3: Market Data and Indicators
 
 Deliverables:
 
-- Build Binance OHLCV provider.
-- Build Binance US OHLCV fallback provider.
+- Build Binance US OHLCV provider.
+- Build Kraken OHLCV fallback provider.
 - Build crypto symbol resolver:
-  - Try Binance Global `<BASE>USDT`.
-  - Fall back to Binance US `<BASE>USDT`.
+  - Try Binance US `<BASE>USDT`.
+  - Fall back to Kraken `<BASE>USDT`.
   - Mark unsupported if neither provider has the pair.
-- Build stock OHLCV provider after confirming the free source.
+- Build Twelve Data stock OHLCV provider and US exchange catalog sync (NYSE, NASDAQ, BATS).
 - Build FRED provider for VIX and S&P 500 macro data.
 - Build indicator utilities:
   - RSI(14) Wilder
@@ -1074,8 +1090,8 @@ Deliverables:
 
 Acceptance criteria:
 
-- App can fetch 30 weekly candles for BTC, ETH, SOL, ZEC, and any other Binance-supported MVP crypto asset.
-- HYPE resolves through Binance Global, Binance US, or is clearly marked unsupported with a reason.
+- App can fetch 30 weekly candles for BTC, ETH, SOL, ZEC, and any other Binance US- or Kraken-supported MVP crypto asset.
+- HYPE resolves through Binance US, Kraken, or is clearly marked unsupported with a reason.
 - Crypto score snapshots store which provider and provider symbol were used.
 - App can fetch enough weekly stock candles for MVP stock assets.
 - RSI tests confirm latest output maps to latest completed candle.
@@ -1150,9 +1166,12 @@ Acceptance criteria:
 
 Deliverables:
 
-- Asset detail score accordions.
-- Component-level explanations.
-- Score history charts.
+- Public marketing landing page and branded Clerk auth pages.
+- Watchlist card grid with composite speedometers and expandable sector score tubes.
+- Header Add assets dialog for catalog search.
+- Asset detail TradingView price chart and Recharts score history.
+- Alert rules table with search, filters, pagination, and bulk actions.
+- Component-level explanations in sector breakdowns.
 - Alert history timeline.
 - Empty states.
 - Loading and error states.
@@ -1161,8 +1180,9 @@ Deliverables:
 Acceptance criteria:
 
 - A user can understand why an asset received its score.
-- Sector dropdowns expose the exact component values and weights.
+- Sector breakdowns expose the exact component values and weights.
 - UI clearly distinguishes stable vs provisional scores if provisional scores are added.
+- Unsigned visitors can reach the landing page; signed-in users reach the watchlist dashboard.
 
 ### Phase 8: Production Hardening
 
@@ -1172,7 +1192,6 @@ Deliverables:
 - Add provider failure handling.
 - Add retry policies.
 - Add observability.
-- Add backup/export path for user alert rules.
 - Add privacy/security review for Telegram tokens.
 
 Acceptance criteria:
@@ -1188,15 +1207,25 @@ DATABASE_URL=
 
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 
 CRON_SECRET=
 MAX_ALERTS_PER_USER_PER_RUN=10
 MAX_TELEGRAM_MESSAGES_PER_MINUTE=20
 
 TELEGRAM_BOT_TOKEN=
+TELEGRAM_BOT_USERNAME=
+TELEGRAM_WEBHOOK_SECRET=
 
 FRED_API_KEY=
 TWELVE_DATA_API_KEY=
+TWELVE_DATA_MAX_CALLS_PER_MINUTE=7
+
+PROVIDER_FETCH_MAX_RETRIES=3
+PROVIDER_FETCH_TIMEOUT_MS=15000
 ```
 
 The MVP uses one shared Tripwire Telegram bot. Store `TELEGRAM_BOT_TOKEN` as an environment variable and store only each user's Telegram `chat_id` in the database.
@@ -1216,6 +1245,8 @@ Unit tests:
 - Initial-match alert behavior.
 - Alert storm cap behavior.
 - Watchlist deletion disabling related alerts.
+- TradingView symbol mapping for asset detail charts.
+- Twelve Data rate-limit behavior.
 - Telegram permanent delivery failure handling.
 
 Integration tests:
@@ -1231,11 +1262,11 @@ Integration tests:
 
 Manual QA:
 
-- Sign up / sign in.
-- Add asset.
-- View asset detail.
-- Expand sector breakdown.
-- Create alert rule.
+- Sign up / sign in from landing page or auth routes.
+- Add asset via header Add assets dialog.
+- View asset detail with TradingView chart and score history.
+- Expand sector breakdown on watchlist cards.
+- Create alert rule from alerts table UI.
 - Confirm initial-match alert sends when the latest score is already above threshold.
 - Confirm repeated fresh qualifying scores send repeated alerts.
 - Confirm duplicate alerts are not sent for the same score snapshot.
@@ -1277,7 +1308,7 @@ Signal interpretation:
 
 Provider outages:
 
-- Binance, FRED, Twelve Data, and other free market-data providers may be unavailable.
+- Binance US, Kraken, FRED, Twelve Data, and other free market-data providers may be unavailable.
 - Mitigation: return null sector snapshots with reasons, keep scoring unaffected sectors, and avoid using stale failed sectors silently.
 
 ## 15. MVP Recommendation
