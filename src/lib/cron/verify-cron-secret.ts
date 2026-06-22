@@ -1,20 +1,9 @@
-import { timingSafeEqual } from "crypto"
 import { NextResponse } from "next/server"
+import { safeCompare } from "@/lib/crypto/safe-compare"
 import { extractCronSecret } from "@/lib/cron/extract-cron-secret"
 import { env } from "@/lib/env"
 
 export { extractCronSecret } from "@/lib/cron/extract-cron-secret"
-
-const safeCompare = (provided: string, expected: string): boolean => {
-  const providedBuffer = Buffer.from(provided)
-  const expectedBuffer = Buffer.from(expected)
-
-  if (providedBuffer.length !== expectedBuffer.length) {
-    return false
-  }
-
-  return timingSafeEqual(providedBuffer, expectedBuffer)
-}
 
 export const isValidCronSecret = (provided: string | null): boolean => {
   if (!provided) {

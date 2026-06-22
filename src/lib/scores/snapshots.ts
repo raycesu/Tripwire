@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, inArray } from "drizzle-orm"
 import { db } from "@/db/client"
 import { scoreSnapshots } from "@/db/schema"
 import { computeComposite } from "@/scoring/composite"
@@ -66,10 +66,6 @@ export const resolveValidForDate = (
     return getUtcMidnight(result.validForDate)
   }
 
-  if (sector === "macro" || cadence === "daily") {
-    return getUtcMidnight(runDate)
-  }
-
   return getUtcMidnight(runDate)
 }
 
@@ -128,15 +124,9 @@ export const upsertScoreSnapshot = async (
   return mapRow(row)
 }
 
-export const getLatestSectorSnapshots = async (
-  assetId: string
-): Promise<Record<SectorName, ScoreSnapshotRecord | null>> => {
-  const rows = await db
-    .select()
-    .from(scoreSnapshots)
-    .where(eq(scoreSnapshots.assetId, assetId))
-    .orderBy(desc(scoreSnapshots.computedAt))
-
+const buildLatestSectorSnapshotsMap = (
+  rows: (typeof scoreSnapshots.$inferSelect)[]
+): Record<SectorName, ScoreSnapshotRecord | null> => {
   const latestBySector = new Map<SectorName, ScoreSnapshotRecord>()
 
   for (const row of rows) {
@@ -157,6 +147,58 @@ export const getLatestSectorSnapshots = async (
     volume: latestBySector.get("volume") ?? null,
     composite: latestBySector.get("composite") ?? null,
   }
+}
+
+export const getLatestSectorSnapshots = async (
+  assetId: string
+): Promise<Record<SectorName, ScoreSnapshotRecord | null>> => {
+  const rows = await db
+    .select()
+    .from(scoreSnapshots)
+    .where(eq(scoreSnapshots.assetId, assetId))
+    .orderBy(desc(scoreSnapshots.computedAt))
+
+  return buildLatestSectorSnapshotsMap(rows)
+}
+
+export const getLatestSectorSnapshotsForAssets = async (
+  assetIds: string[]
+): Promise<Map<string, Record<SectorName, ScoreSnapshotRecord | null>>> => {
+  const result = new Map<string, Record<SectorName, ScoreSnapshotRecord | null>>()
+
+  if (assetIds.length === 0) {
+    return result
+  }
+
+  for (const assetId of assetIds) {
+    result.set(assetId, {
+      macro: null,
+      relativity: null,
+      volume: null,
+      composite: null,
+    })
+  }
+
+  const rows = await db
+    .select()
+    .from(scoreSnapshots)
+    .where(inArray(scoreSnapshots.assetId, assetIds))
+    .orderBy(desc(scoreSnapshots.computedAt))
+
+  const rowsByAssetId = new Map<string, (typeof scoreSnapshots.$inferSelect)[]>()
+
+  for (const row of rows) {
+    const assetRows = rowsByAssetId.get(row.assetId) ?? []
+    assetRows.push(row)
+    rowsByAssetId.set(row.assetId, assetRows)
+  }
+
+  for (const assetId of assetIds) {
+    const assetRows = rowsByAssetId.get(assetId) ?? []
+    result.set(assetId, buildLatestSectorSnapshotsMap(assetRows))
+  }
+
+  return result
 }
 
 export const recomputeComposite = async (

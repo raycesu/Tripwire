@@ -7,7 +7,7 @@ export default function AssetNotFound() {
       <p className="text-sm text-muted-foreground">
         This symbol is not in the Tripwire catalog yet.
       </p>
-      <ButtonLink href="/assets">Back to catalog</ButtonLink>
+      <ButtonLink href="/dashboard">Back to watchlist</ButtonLink>
     </main>
   )
 }

@@ -29,7 +29,7 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
 
   for (const asset of assets) {
     summary.attempted += 1
-    let assetSucceeded = true
+    let assetHadFailure = false
     const benchmarkSymbol = resolveBenchmarkSymbol(asset)
     const assetType = asset.assetType === "stock" ? "stock" : "crypto"
     const benchmarkRsi = await context.getBenchmarkRsi(benchmarkSymbol, assetType)
@@ -55,8 +55,7 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
       })
       freshSnapshotIds.push(relativitySnapshot.id)
     } catch (error) {
-      assetSucceeded = false
-      summary.failed += 1
+      assetHadFailure = true
       const message = error instanceof Error ? error.message : "Unknown error"
       logWarn({
         event: "asset_score_failed",
@@ -93,8 +92,7 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
       })
       freshSnapshotIds.push(volumeSnapshot.id)
     } catch (error) {
-      assetSucceeded = false
-      summary.failed += 1
+      assetHadFailure = true
       const message = error instanceof Error ? error.message : "Unknown error"
       logWarn({
         event: "asset_score_failed",
@@ -116,12 +114,8 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
 
       const compositeSnapshot = await recomputeComposite(asset.id, fallbackValidForDate)
       freshSnapshotIds.push(compositeSnapshot.id)
-
-      if (assetSucceeded) {
-        summary.succeeded += 1
-      }
     } catch (error) {
-      summary.failed += 1
+      assetHadFailure = true
       const message = error instanceof Error ? error.message : "Unknown error"
       logWarn({
         event: "asset_score_failed",
@@ -136,6 +130,12 @@ export const runWeeklyScores = async (): Promise<WeeklyScoresResult> => {
         sector: "composite",
         message: redactString(message),
       })
+    }
+
+    if (assetHadFailure) {
+      summary.failed += 1
+    } else {
+      summary.succeeded += 1
     }
   }
 

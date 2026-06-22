@@ -1,5 +1,3 @@
-"use client"
-
 import { BreakdownTable } from "@/components/scores/breakdown-table"
 import {
   buildCompositeBreakdownRows,

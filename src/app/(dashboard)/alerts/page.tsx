@@ -23,6 +23,7 @@ export default async function AlertsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
+      <h1 className="sr-only">Alerts</h1>
       <AlertRulesPanel initialRules={rules.map(toAlertRuleDto)} watchlist={watchlistOptions} />
 
       <section>

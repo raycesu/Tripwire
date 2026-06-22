@@ -37,7 +37,7 @@ const formatChartDate = (date: Date): string => {
 type ChartDotProps = {
   cx?: number
   cy?: number
-  payload?: { score: number }
+  payload?: { score: number; isStale: boolean }
 }
 
 const ScoreDot = ({ cx, cy, payload }: ChartDotProps) => {
@@ -46,8 +46,19 @@ const ScoreDot = ({ cx, cy, payload }: ChartDotProps) => {
   }
 
   const fill = scoreToOklch(payload.score)
+  const opacity = payload.isStale ? 0.35 : 1
 
-  return <circle cx={cx} cy={cy} r={3} fill={fill} stroke={fill} strokeWidth={1} />
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={3}
+      fill={fill}
+      stroke={fill}
+      strokeWidth={1}
+      opacity={opacity}
+    />
+  )
 }
 
 export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProps) => {
@@ -60,10 +71,13 @@ export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProp
       points.map((point) => ({
         date: formatChartDate(point.validForDate),
         score: point.score,
+        isStale: point.isStale,
         interpretation: getScoreInterpretation(point.score),
       })),
     [points]
   )
+
+  const hasStalePoints = chartData.some((point) => point.isStale)
 
   const hasEnoughData = chartData.length >= 2
 
@@ -89,6 +103,10 @@ export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProp
           </select>
         </label>
       </div>
+
+      {hasStalePoints ? (
+        <p className="mb-3 text-xs text-muted-foreground">Dimmed points are stale snapshots.</p>
+      ) : null}
 
       {!hasEnoughData ? (
         <p className="text-sm text-muted-foreground">

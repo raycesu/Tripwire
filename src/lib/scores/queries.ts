@@ -1,9 +1,13 @@
 import { and, desc, eq, inArray } from "drizzle-orm"
 import { db } from "@/db/client"
 import { scoreSnapshots } from "@/db/schema"
+import { resolveCompositeForDisplay } from "@/lib/scores/resolve-composite"
+import { mapRowToScoreHistoryPoint } from "@/lib/scores/history"
 import type { AssetSnapshotsSummary, ScoreHistoryPoint, ScoreSnapshotView } from "@/lib/scores/types"
 import { computeIsStale } from "@/scoring/staleness"
 import type { Cadence, SectorName } from "@/scoring/types"
+
+export { mapRowToScoreHistoryPoint } from "@/lib/scores/history"
 
 const DEFAULT_HISTORY_LIMIT = 90
 
@@ -47,17 +51,11 @@ export const getScoreHistory = async (
   const points: ScoreHistoryPoint[] = []
 
   for (const row of rows) {
-    const numeric = row.score !== null ? Number(row.score) : NaN
+    const point = mapRowToScoreHistoryPoint(row, sector)
 
-    if (Number.isNaN(numeric)) {
-      continue
+    if (point) {
+      points.push(point)
     }
-
-    points.push({
-      validForDate: row.validForDate,
-      score: numeric,
-      computedAt: row.computedAt,
-    })
   }
 
   return points.reverse()
@@ -75,10 +73,11 @@ const buildSummaryFromSnapshots = (
     }
   }
 
-  const composite = bySector.get("composite") ?? null
   const macro = bySector.get("macro") ?? null
   const relativity = bySector.get("relativity") ?? null
   const volume = bySector.get("volume") ?? null
+  const storedComposite = bySector.get("composite") ?? null
+  const composite = resolveCompositeForDisplay(storedComposite, { macro, relativity, volume })
 
   const all = [composite, macro, relativity, volume].filter(
     (entry): entry is ScoreSnapshotView => entry !== null

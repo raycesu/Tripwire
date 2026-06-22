@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { ButtonLink } from "@/components/ui/button"
 
 export const LandingHero = () => {
@@ -21,11 +22,13 @@ export const LandingHero = () => {
         </div>
       </div>
       <div className="flex min-h-0 justify-center lg:justify-end">
-        <img
+        <Image
           src="/hero.png"
           alt="Tripwire score dashboard preview"
           width={786}
           height={731}
+          priority
+          sizes="(max-width: 1024px) 100vw, 512px"
           className="h-auto w-full max-h-[min(46vh,520px)] max-w-md object-contain sm:max-h-[min(50vh,560px)] sm:max-w-lg lg:ml-auto"
         />
       </div>

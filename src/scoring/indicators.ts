@@ -1,5 +1,3 @@
-import type { WeeklyOhlcvCandle } from "@/providers/types"
-
 export const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value))
 
@@ -51,12 +49,4 @@ export const latestRsi = (closes: number[], period = 14): number | null => {
   }
 
   return rsiOutput[rsiOutput.length - 1]
-}
-
-export const getLatestCompletedClose = (candles: WeeklyOhlcvCandle[]): number | null => {
-  if (candles.length === 0) {
-    return null
-  }
-
-  return candles[candles.length - 1].close
 }

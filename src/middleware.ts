@@ -7,8 +7,16 @@ const isProtectedRoute = createRouteMatcher([
   "/settings(.*)",
 ])
 
+const isProtectedApiRoute = createRouteMatcher([
+  "/api/watchlist(.*)",
+  "/api/alerts(.*)",
+  "/api/telegram/connect",
+  "/api/telegram/test",
+  "/api/assets(.*)",
+])
+
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
+  if (isProtectedRoute(req) || isProtectedApiRoute(req)) {
     await auth.protect()
   }
 })

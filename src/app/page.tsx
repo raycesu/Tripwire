@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 
@@ -5,6 +6,12 @@ import { LandingBodyLock } from "@/components/marketing/landing-body-lock"
 import { LandingHeader } from "@/components/marketing/landing-header"
 import { LandingHero } from "@/components/marketing/landing-hero"
 import { LandingStats } from "@/components/marketing/landing-stats"
+
+export const metadata: Metadata = {
+  title: "Know when to stop watching",
+  description:
+    "Tripwire scores your watchlist across contrarian sectors and sends Telegram alerts when real opportunities show up.",
+}
 
 export default async function Home() {
   const { userId } = await auth()

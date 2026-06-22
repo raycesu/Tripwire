@@ -13,16 +13,20 @@ import {
   varchar,
 } from "drizzle-orm/pg-core"
 
-export const users = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  clerkUserId: varchar("clerk_user_id", { length: 191 }).notNull().unique(),
-  telegramChatId: text("telegram_chat_id"),
-  telegramConnectCode: text("telegram_connect_code"),
-  telegramConnectCodeExpiresAt: timestamp("telegram_connect_code_expires_at", { withTimezone: true }),
-  telegramVerifiedAt: timestamp("telegram_verified_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-})
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clerkUserId: varchar("clerk_user_id", { length: 191 }).notNull().unique(),
+    telegramChatId: text("telegram_chat_id"),
+    telegramConnectCode: text("telegram_connect_code"),
+    telegramConnectCodeExpiresAt: timestamp("telegram_connect_code_expires_at", { withTimezone: true }),
+    telegramVerifiedAt: timestamp("telegram_verified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("users_telegram_connect_code_idx").on(table.telegramConnectCode)]
+)
 
 export const assetCatalog = pgTable(
   "asset_catalog",
@@ -112,7 +116,7 @@ export const providerCache = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("provider_cache_cache_key_unique").on(table.cacheKey)]
+  (table) => [uniqueIndex("provider_cache_cache_key_unique").on(table.cacheKey), index("provider_cache_expires_at_idx").on(table.expiresAt)]
 )
 
 export const telegramDeliveryState = pgTable(
@@ -157,6 +161,12 @@ export const scoreSnapshots = pgTable(
       table.sector,
       table.validForDate,
       table.cadence
+    ),
+    index("score_snapshots_asset_computed_idx").on(table.assetId, table.computedAt),
+    index("score_snapshots_asset_sector_valid_date_idx").on(
+      table.assetId,
+      table.sector,
+      table.validForDate
     ),
   ]
 )
@@ -212,6 +222,7 @@ export const alertEvents = pgTable(
     uniqueIndex("alert_events_rule_snapshot_unique").on(table.alertRuleId, table.scoreSnapshotId),
     index("alert_events_user_created_idx").on(table.userId, table.createdAt),
     index("alert_events_telegram_status_sent_idx").on(table.telegramStatus, table.sentAt),
+    index("alert_events_rule_status_sent_idx").on(table.alertRuleId, table.telegramStatus, table.sentAt),
   ]
 )
 

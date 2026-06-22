@@ -1,7 +1,11 @@
-import { eq } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import { db } from "@/db/client"
 import { telegramDeliveryState, users } from "@/db/schema"
 import type { TelegramDeliveryStatus } from "@/db/schema"
+
+import { resolveTelegramChatId } from "@/lib/telegram/resolve-chat-id"
+
+export { resolveTelegramChatId } from "@/lib/telegram/resolve-chat-id"
 
 export type TelegramConnectionStatus = {
   isVerified: boolean
@@ -53,18 +57,54 @@ export const getUserTelegramChatId = async (userId: string): Promise<string | nu
     },
   })
 
-  if (!user?.telegramVerifiedAt || !user.telegramChatId) {
-    return null
-  }
-
   const delivery = await db.query.telegramDeliveryState.findFirst({
     where: eq(telegramDeliveryState.userId, userId),
     columns: { status: true },
   })
 
-  if (delivery && delivery.status !== "connected") {
-    return null
+  return resolveTelegramChatId(user, delivery?.status)
+}
+
+export const getUserTelegramChatIds = async (
+  userIds: string[]
+): Promise<Map<string, string | null>> => {
+  const result = new Map<string, string | null>()
+
+  if (userIds.length === 0) {
+    return result
   }
 
-  return user.telegramChatId
+  for (const userId of userIds) {
+    result.set(userId, null)
+  }
+
+  const userRows = await db.query.users.findMany({
+    where: inArray(users.id, userIds),
+    columns: {
+      id: true,
+      telegramChatId: true,
+      telegramVerifiedAt: true,
+    },
+  })
+
+  const deliveryRows = await db.query.telegramDeliveryState.findMany({
+    where: inArray(telegramDeliveryState.userId, userIds),
+    columns: {
+      userId: true,
+      status: true,
+    },
+  })
+
+  const deliveryStatusByUserId = new Map(
+    deliveryRows.map((row) => [row.userId, row.status])
+  )
+
+  for (const user of userRows) {
+    result.set(
+      user.id,
+      resolveTelegramChatId(user, deliveryStatusByUserId.get(user.id))
+    )
+  }
+
+  return result
 }

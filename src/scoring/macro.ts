@@ -103,7 +103,7 @@ export const computeStockMacro = async (): Promise<SectorScoreResult> => {
 
   const weeklyCandles = dailyPointsToWeeklyCandles(sp500.points)
   const normalized = normalizeWeeklyOhlcvCandles(weeklyCandles, {
-    excludeInProgress: false,
+    excludeInProgress: true,
     minCount: RSI_MIN_CANDLE_COUNT,
   })
 

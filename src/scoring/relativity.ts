@@ -1,4 +1,5 @@
 import type { AssetDto } from "@/lib/assets/types"
+import { resolveBenchmarkSymbol as resolveAssetBenchmarkSymbol } from "@/lib/assets/benchmark"
 import {
   fetchBenchmarkWeeklyOhlcv,
   fetchWeeklyOhlcvFromDto,
@@ -21,17 +22,8 @@ const nullResult = (nullReason: string, components: Record<string, unknown> = {}
   components,
 })
 
-export const resolveBenchmarkSymbol = (asset: AssetDto): string => {
-  if (asset.benchmarkSymbol) {
-    return asset.benchmarkSymbol
-  }
-
-  if (asset.assetType === "crypto") {
-    return "BTC"
-  }
-
-  return "SPY"
-}
+export const resolveBenchmarkSymbol = (asset: AssetDto): string =>
+  asset.benchmarkSymbol ?? resolveAssetBenchmarkSymbol(asset.symbol, asset.assetType)
 
 const computeRsiFromOhlcv = async (
   fetchResult: Awaited<ReturnType<typeof fetchWeeklyOhlcvFromDto>>

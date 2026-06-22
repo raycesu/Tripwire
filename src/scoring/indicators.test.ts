@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
   clamp,
-  getLatestCompletedClose,
   latestRsi,
   wilderRsi,
 } from "@/scoring/indicators"
-import type { WeeklyOhlcvCandle } from "@/providers/types"
 
 // Reference closes (30 points) — latest Wilder RSI(14) ≈ 51.28 for this fixture
 const REFERENCE_CLOSES = [
@@ -44,21 +42,5 @@ describe("wilderRsi", () => {
   it("matches a known reference RSI for the fixture tail", () => {
     const latest = latestRsi(REFERENCE_CLOSES, 14)
     expect(latest).toBeCloseTo(51.28, 1)
-  })
-})
-
-describe("getLatestCompletedClose", () => {
-  it("reads the last candle close in the series", () => {
-    const candles: WeeklyOhlcvCandle[] = REFERENCE_CLOSES.map((close, index) => ({
-      openTime: new Date(Date.UTC(2020, 0, 1 + index * 7)),
-      closeTime: new Date(Date.UTC(2020, 0, 7 + index * 7)),
-      open: close,
-      high: close,
-      low: close,
-      close,
-      volume: 1000,
-    }))
-
-    expect(getLatestCompletedClose(candles)).toBe(REFERENCE_CLOSES[REFERENCE_CLOSES.length - 1])
   })
 })

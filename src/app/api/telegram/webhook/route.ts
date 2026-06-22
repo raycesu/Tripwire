@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { safeCompare } from "@/lib/crypto/safe-compare"
 import { env } from "@/lib/env"
 import { logInfo, logWarn } from "@/lib/logging/logger"
 import { linkTelegramChat } from "@/lib/telegram/link-chat"
@@ -17,7 +18,7 @@ const parseStartCode = (text: string): string | null => {
 export const POST = async (request: Request) => {
   const secret = request.headers.get("x-telegram-bot-api-secret-token")
 
-  if (!secret || secret !== env.TELEGRAM_WEBHOOK_SECRET) {
+  if (!secret || !safeCompare(secret, env.TELEGRAM_WEBHOOK_SECRET)) {
     logWarn({ event: "telegram_webhook_unauthorized" })
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
@@ -55,10 +56,21 @@ export const POST = async (request: Request) => {
   }
 
   try {
-    await linkTelegramChat(connectCode, String(chatId))
+    const result = await linkTelegramChat(connectCode, String(chatId))
+
+    if (!result.ok) {
+      logWarn({
+        event: "telegram_webhook_link_rejected",
+        connectCodePrefix: connectCode.slice(0, 4),
+        reason: result.reason,
+      })
+      return NextResponse.json({ ok: true })
+    }
+
     logInfo({
       event: "telegram_webhook_linked",
       connectCodePrefix: connectCode.slice(0, 4),
+      userId: result.userId,
     })
   } catch (error) {
     logWarn({

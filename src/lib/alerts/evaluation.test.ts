@@ -64,6 +64,12 @@ describe("doesRuleMatchSnapshot", () => {
       )
     ).toBe(false)
   })
+
+  it("never matches unknown operators", () => {
+    expect(
+      doesRuleMatchSnapshot({ operator: "below", threshold: "1.00" }, baseSnapshot())
+    ).toBe(false)
+  })
 })
 
 describe("prioritizeAlertRules", () => {

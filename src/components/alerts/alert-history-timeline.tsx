@@ -91,8 +91,8 @@ export const AlertHistoryTimeline = ({ events, assetSymbols }: AlertHistoryTimel
       <EmptyState
         title="No alerts fired yet"
         description="Create a rule and wait for the next scoring run. Initial-match alerts fire when the latest score already qualifies."
-        actionHref="/assets"
-        actionLabel="Browse assets"
+        actionHref="/dashboard"
+        actionLabel="Back to watchlist"
       />
     )
   }

@@ -18,10 +18,10 @@ export default function AssetDetailError({ error, reset }: AssetDetailErrorProps
           Try again
         </Button>
         <Link
-          href="/assets"
+          href="/dashboard"
           className="inline-flex items-center rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
         >
-          Back to catalog
+          Back to watchlist
         </Link>
       </div>
     </main>

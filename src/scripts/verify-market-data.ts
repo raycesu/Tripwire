@@ -1,4 +1,4 @@
-import { resolveAllSeedAssets } from "@/lib/assets/resolve-assets"
+import { resolvePendingAssets } from "@/lib/assets/resolve-assets"
 import { listActiveAssets } from "@/lib/assets/queries"
 import { getLatestVix, getSp500DailyCloses } from "@/providers/fred"
 import { fetchWeeklyOhlcvFromDto } from "@/providers/market-data"
@@ -14,7 +14,7 @@ const run = async () => {
   const rows: CheckRow[] = []
 
   console.log("Resolving seed assets...\n")
-  await resolveAllSeedAssets()
+  await resolvePendingAssets()
 
   const assets = await listActiveAssets()
   const cryptoTargets = ["BTC", "ETH", "SOL", "ZEC", "HYPE"]

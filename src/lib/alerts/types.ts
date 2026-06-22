@@ -1,8 +1,21 @@
 import type { AlertRule } from "@/db/schema"
 import type { AssetType } from "@/lib/assets/types"
 import type { SectorName } from "@/scoring/types"
+import { z } from "zod"
 
 export type AlertScope = "composite" | "sector"
+
+const alertOperatorSchema = z.literal("above")
+
+export const parseAlertOperator = (operator: string): "above" => {
+  const parsed = alertOperatorSchema.safeParse(operator)
+
+  if (!parsed.success) {
+    return "above"
+  }
+
+  return parsed.data
+}
 
 export type AlertRuleInitialValues = {
   assetId: string
@@ -39,7 +52,7 @@ export const toAlertRuleDto = (rule: AlertRuleWithAsset): AlertRuleDto => ({
   assetType: rule.asset.assetType as AssetType,
   scope: rule.scope as AlertScope,
   sector: (rule.sector as SectorName | null) ?? null,
-  operator: "above",
+  operator: parseAlertOperator(rule.operator),
   threshold: Number(rule.threshold),
   cooldownMinutes: rule.cooldownMinutes,
   isEnabled: rule.isEnabled,

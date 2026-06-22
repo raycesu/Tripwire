@@ -67,14 +67,42 @@ Replace `https://your-app.vercel.app` with your production domain.
 | Tripwire Daily Scores | `https://your-app.vercel.app/api/cron/score-daily` | Daily at 00:30 | Macro + composite + alerts |
 | Tripwire Weekly Scores | `https://your-app.vercel.app/api/cron/score-weekly` | Monday at 01:00 | After weekly candle close |
 | Tripwire Alert Retry | `https://your-app.vercel.app/api/cron/evaluate-alerts` | Every 4–6 hours | Optional; retries failed/unsent alerts |
-| Tripwire Catalog Sync | `https://your-app.vercel.app/api/cron/sync-asset-catalog` | Daily at 00:15 | Binance USDT pairs + Twelve Data stocks |
+| Tripwire Catalog Sync | `https://your-app.vercel.app/api/cron/sync-asset-catalog` | Daily at 00:15 | Binance USDT pairs + Twelve Data stocks; crypto OHLCV may fall back to Kraken when Binance US is unavailable |
 
 For each job in cron-job.org:
 
 1. Method: `POST`
 2. Request header: `Authorization: Bearer <your CRON_SECRET>`
 3. Enable failure notifications
-4. Save execution history for debugging
+4. Enable **prevent overlapping executions** when available
+5. Save execution history for debugging
+
+## Preventing overlapping runs
+
+Tripwire does not enforce a server-side job lock. Overlapping cron triggers can run in parallel and each create their own `scheduled_job_runs` row.
+
+Recommended operational controls:
+
+1. **Stagger schedules** so jobs do not overlap. Example UTC order:
+   - `00:15` — catalog sync
+   - `00:30` — daily scores
+   - `01:00 Monday` — weekly scores
+   - Every 4–6 hours — alert retry (avoid running during scoring windows when possible)
+2. **Enable cron-job.org overlap prevention** on each job when the UI offers it.
+3. **Expect idempotent score writes** — snapshots upsert by `asset_id + sector + valid_for_date + cadence`, so duplicate runs should not create duplicate history rows.
+4. **Watch provider quota** — parallel runs still waste external API calls and can increase alert evaluation contention (duplicate sends are mitigated by the `alert_events` unique constraint and `ON CONFLICT DO NOTHING`).
+
+Weekly score responses report `failed` **once per asset** when any relativity, volume, or composite step throws. Per-sector errors remain in `scheduled_job_runs.error_json`.
+
+## Twelve Data rate limiting
+
+`TWELVE_DATA_MAX_CALLS_PER_MINUTE` (default `7`) is enforced by an **in-process token bucket** in each Vercel function instance. It is **not shared across instances** or cold starts.
+
+Operational guidance:
+
+- Keep the default conservative unless your Twelve Data plan allows more headroom.
+- Avoid overlapping catalog sync and weekly stock scoring when possible.
+- Monitor logs for Twelve Data `429` responses during cron windows.
 
 ## Local smoke test
 

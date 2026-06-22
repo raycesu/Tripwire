@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { AssetDetailHeader } from "@/components/assets/asset-detail-header"
 import { TradingViewChartSection } from "@/components/assets/trading-view-chart-section"
 import { ScoreHistorySection } from "@/components/scores/score-history-section"
 import { WatchlistToggleButton } from "@/components/watchlist/watchlist-toggle-button"
@@ -7,7 +8,7 @@ import { ensureAsset } from "@/lib/assets/ensure-asset"
 import { isAssetOnWatchlist } from "@/lib/assets/queries"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
 import { resolveTradingViewSymbolForAsset } from "@/lib/market-data/resolve-tradingview-symbol"
-import { getScoreHistory } from "@/lib/scores/queries"
+import { getLatestSnapshotsForAsset, getScoreHistory } from "@/lib/scores/queries"
 
 type AssetDetailPageProps = {
   params: Promise<{ symbol: string }>
@@ -22,9 +23,10 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
     notFound()
   }
 
-  const [onWatchlist, compositeHistory, macroHistory, relativityHistory, volumeHistory] =
+  const [onWatchlist, snapshotSummary, compositeHistory, macroHistory, relativityHistory, volumeHistory] =
     await Promise.all([
       isAssetOnWatchlist(user.id, asset.id),
+      getLatestSnapshotsForAsset(asset.id),
       getScoreHistory(asset.id, "composite"),
       getScoreHistory(asset.id, "macro"),
       getScoreHistory(asset.id, "relativity"),
@@ -45,6 +47,8 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
           isOnWatchlist={onWatchlist}
         />
       </div>
+
+      <AssetDetailHeader asset={asset} summary={snapshotSummary} />
 
       <TradingViewChartSection
         tradingViewSymbol={tradingViewSymbol}

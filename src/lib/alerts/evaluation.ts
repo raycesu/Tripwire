@@ -1,7 +1,8 @@
 import type { AlertRule } from "@/db/schema"
 import type { ScoreSnapshotRecord } from "@/lib/scores/snapshots"
-import { formatRuleLabel, type AlertScope } from "@/lib/alerts/types"
+import { formatRuleLabel, parseAlertOperator, type AlertScope } from "@/lib/alerts/types"
 import { formatScore } from "@/lib/scores/labels"
+import { logWarn } from "@/lib/logging/logger"
 import { formatScoreNumber } from "@/scoring/thresholds"
 import type { SectorName } from "@/scoring/types"
 
@@ -28,6 +29,23 @@ export const getRuleTargetSector = (rule: Pick<AlertRule, "scope" | "sector">): 
   return (rule.sector ?? "macro") as SectorName
 }
 
+export const isRuleWithinCooldown = (
+  cooldownMinutes: number,
+  lastSentAt: Date | null | undefined,
+  now: Date
+): boolean => {
+  if (cooldownMinutes <= 0) {
+    return false
+  }
+
+  if (!lastSentAt) {
+    return false
+  }
+
+  const cooldownMs = cooldownMinutes * 60_000
+  return now.getTime() - lastSentAt.getTime() < cooldownMs
+}
+
 export const doesRuleMatchSnapshot = (
   rule: Pick<AlertRule, "operator" | "threshold">,
   snapshot: Pick<ScoreSnapshotRecord, "score" | "isNull" | "isStale">
@@ -47,6 +65,11 @@ export const doesRuleMatchSnapshot = (
   if (rule.operator === "above") {
     return scoreValue > threshold
   }
+
+  logWarn({
+    event: "alert_unknown_operator",
+    operator: rule.operator,
+  })
 
   return false
 }
@@ -79,7 +102,7 @@ export const buildAlertMessage = (input: BuildAlertMessageInput): string => {
   const ruleLabel = formatRuleLabel({
     scope,
     sector: input.rule.sector as SectorName | null,
-    operator: "above",
+    operator: parseAlertOperator(input.rule.operator),
     threshold: Number(input.rule.threshold),
   })
 

@@ -5,53 +5,91 @@ import {
   buildAlertMessage,
   doesRuleMatchSnapshot,
   getRuleTargetSector,
+  isRuleWithinCooldown,
   parseSnapshotScore,
   prioritizeAlertRules,
 } from "@/lib/alerts/evaluation"
+import { makeAlertEventKey } from "@/lib/alerts/event-keys"
 import {
   countGlobalSentAlertsInLastMinute,
   getAlertRuleForUser,
-  getLastSentAlertAt,
+  getExistingAlertEventKeys,
+  getLastSentAlertAtByRuleIds,
   getLatestSnapshotForRule,
   getSnapshotsByIds,
-  hasAlertEventForSnapshot,
   listEnabledAlertRules,
   listEnabledRulesForSnapshots,
   listRetryableAlertEvents,
+  resolveLatestSnapshotForRule,
 } from "@/lib/alerts/queries"
 import type { AlertRuleWithAsset } from "@/lib/alerts/types"
 import { env } from "@/lib/env"
-import { getLatestSectorSnapshots, type ScoreSnapshotRecord } from "@/lib/scores/snapshots"
+import {
+  getLatestSectorSnapshotsForAssets,
+  type ScoreSnapshotRecord,
+} from "@/lib/scores/snapshots"
 import { markTelegramDisconnected } from "@/lib/telegram/link-chat"
-import { getUserTelegramChatId } from "@/lib/telegram/queries"
+import { getUserTelegramChatIds } from "@/lib/telegram/queries"
 import { sendTelegramMessage, TelegramSendError } from "@/providers/telegram"
 import {
   createAlertRunSummary,
   mergeAlertRunSummaries,
   type AlertRunSummary,
 } from "@/jobs/types"
+import type { SectorName } from "@/scoring/types"
 
 type AlertCandidate = {
   rule: AlertRuleWithAsset
   snapshot: ScoreSnapshotRecord
 }
 
-const isWithinCooldown = async (
-  rule: AlertRuleWithAsset,
-  now: Date
-): Promise<boolean> => {
-  if (rule.cooldownMinutes <= 0) {
-    return false
+type AlertEvaluationPrefetch = {
+  existingEventKeys: Set<string>
+  lastSentAtByRuleId: Map<string, Date>
+  chatIdByUserId: Map<string, string | null>
+  sectorSnapshotsByAssetId: Map<string, Record<SectorName, ScoreSnapshotRecord | null>>
+}
+
+const buildAlertEvaluationPrefetch = async (
+  candidates: AlertCandidate[]
+): Promise<AlertEvaluationPrefetch> => {
+  if (candidates.length === 0) {
+    return {
+      existingEventKeys: new Set(),
+      lastSentAtByRuleId: new Map(),
+      chatIdByUserId: new Map(),
+      sectorSnapshotsByAssetId: new Map(),
+    }
   }
 
-  const lastSent = await getLastSentAlertAt(rule.id)
+  const pairs = candidates.map((candidate) => ({
+    alertRuleId: candidate.rule.id,
+    scoreSnapshotId: candidate.snapshot.id,
+  }))
+  const ruleIdsWithCooldown = [
+    ...new Set(
+      candidates
+        .filter((candidate) => candidate.rule.cooldownMinutes > 0)
+        .map((candidate) => candidate.rule.id)
+    ),
+  ]
+  const userIds = [...new Set(candidates.map((candidate) => candidate.rule.userId))]
+  const assetIds = [...new Set(candidates.map((candidate) => candidate.rule.assetId))]
 
-  if (!lastSent) {
-    return false
+  const [existingEventKeys, lastSentAtByRuleId, chatIdByUserId, sectorSnapshotsByAssetId] =
+    await Promise.all([
+      getExistingAlertEventKeys(pairs),
+      getLastSentAlertAtByRuleIds(ruleIdsWithCooldown),
+      getUserTelegramChatIds(userIds),
+      getLatestSectorSnapshotsForAssets(assetIds),
+    ])
+
+  return {
+    existingEventKeys,
+    lastSentAtByRuleId,
+    chatIdByUserId,
+    sectorSnapshotsByAssetId,
   }
-
-  const cooldownMs = rule.cooldownMinutes * 60_000
-  return now.getTime() - lastSent.getTime() < cooldownMs
 }
 
 const recordAlertEvent = async (input: {
@@ -61,20 +99,28 @@ const recordAlertEvent = async (input: {
   telegramStatus: "sent" | "failed" | "skipped_rate_limited"
   telegramError?: string
   sentAt?: Date
-}): Promise<void> => {
+}): Promise<boolean> => {
   const triggeredValue = parseSnapshotScore(input.snapshot.score) ?? 0
 
-  await db.insert(alertEvents).values({
-    alertRuleId: input.rule.id,
-    userId: input.rule.userId,
-    assetId: input.rule.assetId,
-    scoreSnapshotId: input.snapshot.id,
-    triggeredValue: String(triggeredValue),
-    message: input.message,
-    telegramStatus: input.telegramStatus,
-    telegramError: input.telegramError ?? null,
-    sentAt: input.sentAt ?? null,
-  })
+  const rows = await db
+    .insert(alertEvents)
+    .values({
+      alertRuleId: input.rule.id,
+      userId: input.rule.userId,
+      assetId: input.rule.assetId,
+      scoreSnapshotId: input.snapshot.id,
+      triggeredValue: String(triggeredValue),
+      message: input.message,
+      telegramStatus: input.telegramStatus,
+      telegramError: input.telegramError ?? null,
+      sentAt: input.sentAt ?? null,
+    })
+    .onConflictDoNothing({
+      target: [alertEvents.alertRuleId, alertEvents.scoreSnapshotId],
+    })
+    .returning({ id: alertEvents.id })
+
+  return rows.length > 0
 }
 
 const buildCandidates = (
@@ -106,37 +152,59 @@ const buildCandidates = (
   return candidates
 }
 
+const getSectorSnapshotsForCandidate = (
+  candidate: AlertCandidate,
+  prefetch: AlertEvaluationPrefetch
+): Record<SectorName, ScoreSnapshotRecord | null> => {
+  return (
+    prefetch.sectorSnapshotsByAssetId.get(candidate.rule.assetId) ?? {
+      macro: null,
+      relativity: null,
+      volume: null,
+      composite: null,
+    }
+  )
+}
+
 const processCandidate = async (
   candidate: AlertCandidate,
   summary: AlertRunSummary,
   userSentCounts: Map<string, number>,
-  globalSentRemaining: { value: number }
+  globalSentRemaining: { value: number },
+  prefetch: AlertEvaluationPrefetch
 ): Promise<void> => {
   const { rule, snapshot } = candidate
+  const eventKey = makeAlertEventKey(rule.id, snapshot.id)
 
-  if (await hasAlertEventForSnapshot(rule.id, snapshot.id)) {
+  if (prefetch.existingEventKeys.has(eventKey)) {
     summary.skippedDuplicate += 1
     return
   }
 
   const now = new Date()
 
-  if (await isWithinCooldown(rule, now)) {
+  if (
+    isRuleWithinCooldown(
+      rule.cooldownMinutes,
+      prefetch.lastSentAtByRuleId.get(rule.id),
+      now
+    )
+  ) {
     summary.skippedCooldown += 1
     return
   }
 
-  const chatId = await getUserTelegramChatId(rule.userId)
+  const chatId = prefetch.chatIdByUserId.get(rule.userId) ?? null
 
   if (!chatId) {
     summary.skippedNoTelegram += 1
     return
   }
 
+  const sectorSnapshots = getSectorSnapshotsForCandidate(candidate, prefetch)
   const userSent = userSentCounts.get(rule.userId) ?? 0
 
   if (userSent >= env.MAX_ALERTS_PER_USER_PER_RUN) {
-    const sectorSnapshots = await getLatestSectorSnapshots(rule.assetId)
     const message = buildAlertMessage({
       assetSymbol: rule.asset.symbol,
       rule,
@@ -144,7 +212,7 @@ const processCandidate = async (
       sectorSnapshots,
     })
 
-    await recordAlertEvent({
+    const inserted = await recordAlertEvent({
       rule,
       snapshot,
       message,
@@ -152,12 +220,16 @@ const processCandidate = async (
       telegramError: "Per-user alert cap reached for this scoring run",
     })
 
+    if (!inserted) {
+      summary.skippedDuplicate += 1
+      return
+    }
+
     summary.skippedRateLimited += 1
     return
   }
 
   if (globalSentRemaining.value <= 0) {
-    const sectorSnapshots = await getLatestSectorSnapshots(rule.assetId)
     const message = buildAlertMessage({
       assetSymbol: rule.asset.symbol,
       rule,
@@ -165,7 +237,7 @@ const processCandidate = async (
       sectorSnapshots,
     })
 
-    await recordAlertEvent({
+    const inserted = await recordAlertEvent({
       rule,
       snapshot,
       message,
@@ -173,11 +245,15 @@ const processCandidate = async (
       telegramError: "Global Telegram per-minute cap reached",
     })
 
+    if (!inserted) {
+      summary.skippedDuplicate += 1
+      return
+    }
+
     summary.skippedRateLimited += 1
     return
   }
 
-  const sectorSnapshots = await getLatestSectorSnapshots(rule.assetId)
   const message = buildAlertMessage({
     assetSymbol: rule.asset.symbol,
     rule,
@@ -188,13 +264,18 @@ const processCandidate = async (
   try {
     await sendTelegramMessage({ chatId, text: message })
 
-    await recordAlertEvent({
+    const inserted = await recordAlertEvent({
       rule,
       snapshot,
       message,
       telegramStatus: "sent",
       sentAt: now,
     })
+
+    if (!inserted) {
+      summary.skippedDuplicate += 1
+      return
+    }
 
     userSentCounts.set(rule.userId, userSent + 1)
     globalSentRemaining.value -= 1
@@ -243,7 +324,7 @@ export const evaluateAlerts = async (input: {
   const uniqueCandidates: AlertCandidate[] = []
 
   for (const candidate of candidates) {
-    const key = `${candidate.rule.id}:${candidate.snapshot.id}`
+    const key = makeAlertEventKey(candidate.rule.id, candidate.snapshot.id)
 
     if (seenRuleSnapshot.has(key)) {
       continue
@@ -272,9 +353,10 @@ export const evaluateAlerts = async (input: {
     value: Math.max(0, env.MAX_TELEGRAM_MESSAGES_PER_MINUTE - globalSentCount),
   }
   const userSentCounts = new Map<string, number>()
+  const prefetch = await buildAlertEvaluationPrefetch(uniqueCandidates)
 
   for (const candidate of uniqueCandidates) {
-    await processCandidate(candidate, summary, userSentCounts, globalSentRemaining)
+    await processCandidate(candidate, summary, userSentCounts, globalSentRemaining, prefetch)
   }
 
   return summary
@@ -315,20 +397,48 @@ export const evaluateInitialMatchForUser = async (
 
 export const collectUnsentMatchingSnapshotIds = async (): Promise<string[]> => {
   const rules = await listEnabledAlertRules()
-  const snapshotIds: string[] = []
+
+  if (rules.length === 0) {
+    return []
+  }
+
+  const assetIds = [...new Set(rules.map((rule) => rule.assetId))]
+  const sectorSnapshotsByAssetId = await getLatestSectorSnapshotsForAssets(assetIds)
+  const matching: AlertCandidate[] = []
 
   for (const rule of rules) {
-    const snapshot = await getLatestSnapshotForRule(rule)
+    const sectorSnapshots = sectorSnapshotsByAssetId.get(rule.assetId)
+
+    if (!sectorSnapshots) {
+      continue
+    }
+
+    const snapshot = resolveLatestSnapshotForRule(rule, sectorSnapshots)
 
     if (!snapshot || !doesRuleMatchSnapshot(rule, snapshot)) {
       continue
     }
 
-    if (await hasAlertEventForSnapshot(rule.id, snapshot.id)) {
+    matching.push({ rule, snapshot })
+  }
+
+  const existingEventKeys = await getExistingAlertEventKeys(
+    matching.map((candidate) => ({
+      alertRuleId: candidate.rule.id,
+      scoreSnapshotId: candidate.snapshot.id,
+    }))
+  )
+
+  const snapshotIds: string[] = []
+
+  for (const candidate of matching) {
+    const eventKey = makeAlertEventKey(candidate.rule.id, candidate.snapshot.id)
+
+    if (existingEventKeys.has(eventKey)) {
       continue
     }
 
-    snapshotIds.push(snapshot.id)
+    snapshotIds.push(candidate.snapshot.id)
   }
 
   return [...new Set(snapshotIds)]
@@ -344,9 +454,11 @@ const retryFailedAlertDeliveries = async (): Promise<AlertRunSummary> => {
     value: Math.max(0, env.MAX_TELEGRAM_MESSAGES_PER_MINUTE - globalSentCount),
   }
   const userSentCounts = new Map<string, number>()
+  const userIds = [...new Set(retryableEvents.map((event) => event.userId))]
+  const chatIdByUserId = await getUserTelegramChatIds(userIds)
 
   for (const event of retryableEvents) {
-    const chatId = await getUserTelegramChatId(event.userId)
+    const chatId = chatIdByUserId.get(event.userId) ?? null
 
     if (!chatId) {
       summary.skippedNoTelegram += 1

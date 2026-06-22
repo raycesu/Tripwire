@@ -17,6 +17,7 @@ export type ScoreHistoryPoint = {
   validForDate: Date
   score: number
   computedAt: Date
+  isStale: boolean
 }
 
 export type AssetSnapshotsSummary = {

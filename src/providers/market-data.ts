@@ -2,6 +2,7 @@ import type { AssetDto } from "@/lib/assets/types"
 import * as binanceUs from "@/providers/binance-us"
 import { buildUsdtPairSymbol } from "@/providers/crypto-resolver"
 import * as kraken from "@/providers/kraken"
+import { logInfo, logWarn } from "@/lib/logging/logger"
 import * as twelveData from "@/providers/twelve-data"
 import type { ProviderName, WeeklyOhlcvResult } from "@/providers/types"
 import { VOLUME_CANDLE_COUNT } from "@/scoring/candles"
@@ -64,7 +65,34 @@ export const fetchCryptoWeeklyOhlcv = async (
       return usResult
     }
 
-    return fetchKrakenFallbackForBase(baseSymbol, minCount)
+    logWarn({
+      event: "crypto_ohlcv_binance_us_fallback",
+      baseSymbol,
+      nullReason: usResult.nullReason,
+      message: usResult.message,
+    })
+
+    const krakenResult = await fetchKrakenFallbackForBase(baseSymbol, minCount)
+
+    if (!krakenResult.ok) {
+      return krakenResult
+    }
+
+    logInfo({
+      event: "crypto_ohlcv_kraken_fallback_used",
+      baseSymbol,
+      providerSymbol: krakenResult.sourceMetadata.providerSymbol,
+      requestedProvider: providerName ?? "binance_us",
+    })
+
+    return {
+      ...krakenResult,
+      sourceMetadata: {
+        ...krakenResult.sourceMetadata,
+        fallbackFrom: providerName === "binance_global" ? "binance_us" : (providerName ?? "binance_us"),
+        fallbackReason: usResult.message,
+      },
+    }
   }
 
   return {

@@ -212,7 +212,7 @@ Recommended UTC schedules (see docs for details):
 npm test
 ```
 
-Covers scoring formulas, composite/staleness rules, alert evaluation and caps, cron auth, provider HTTP helpers, catalog queries, TradingView symbol mapping, and integration flows. Scoring and alert logic are kept in pure/testable modules under `src/scoring/` and `src/lib/alerts/`.
+Covers scoring formulas, composite/staleness rules, alert evaluation and caps, cron auth, provider HTTP helpers, catalog queries, TradingView symbol mapping, and integration flows. Scoring and alert logic are kept in pure/testable modules under `src/scoring/` and `src/lib/alerts/`. Component and API route integration tests are limited; prefer unit tests and signed-in manual checks for UI flows.
 
 ## Documentation
 

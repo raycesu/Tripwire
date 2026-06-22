@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import type { TelegramConnectionStatus } from "@/lib/telegram/queries"
 
@@ -8,12 +9,53 @@ type TelegramConnectPanelProps = {
   initialStatus: TelegramConnectionStatus
 }
 
+const CONNECT_POLL_INTERVAL_MS = 3000
+const CONNECT_POLL_DURATION_MS = 60000
+
 export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProps) => {
-  const [status, setStatus] = useState(initialStatus)
+  const router = useRouter()
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current)
+      }
+
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+      }
+    }
+  }, [])
+
+  const stopConnectPolling = () => {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current)
+      pollTimeoutRef.current = null
+    }
+
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+  }
+
+  const startConnectPolling = () => {
+    stopConnectPolling()
+
+    pollIntervalRef.current = setInterval(() => {
+      router.refresh()
+    }, CONNECT_POLL_INTERVAL_MS)
+
+    pollTimeoutRef.current = setTimeout(() => {
+      stopConnectPolling()
+    }, CONNECT_POLL_DURATION_MS)
+  }
 
   const handleConnect = async () => {
     setIsConnecting(true)
@@ -30,7 +72,8 @@ export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProp
       }
 
       window.open(data.deepLink, "_blank", "noopener,noreferrer")
-      setMessage("Open Telegram, press Start, then return here and send a test alert.")
+      setMessage("Open Telegram, press Start, then return here. Status will refresh automatically.")
+      startConnectPolling()
     } catch {
       setError("Failed to start Telegram connection")
     } finally {
@@ -53,7 +96,7 @@ export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProp
       }
 
       setMessage("Test alert sent. Check your Telegram chat with the Tripwire bot.")
-      setStatus((prev) => ({ ...prev, isVerified: true, deliveryStatus: "connected" }))
+      router.refresh()
     } catch {
       setError("Failed to send test alert")
     } finally {
@@ -62,20 +105,22 @@ export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProp
   }
 
   const statusLabel = (() => {
-    if (status.isVerified && status.deliveryStatus === "connected") {
+    if (initialStatus.isVerified && initialStatus.deliveryStatus === "connected") {
       return "Connected"
     }
 
-    if (status.deliveryStatus === "blocked") {
+    if (initialStatus.deliveryStatus === "blocked") {
       return "Blocked — reconnect required"
     }
 
-    if (status.deliveryStatus === "invalid_chat") {
+    if (initialStatus.deliveryStatus === "invalid_chat") {
       return "Invalid chat — reconnect required"
     }
 
     return "Not connected"
   })()
+
+  const canSendTest = initialStatus.isVerified || initialStatus.deliveryStatus === "connected"
 
   return (
     <section className="surface-card p-6">
@@ -91,13 +136,13 @@ export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProp
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wider text-muted-foreground">Chat ID</dt>
-          <dd className="mt-1 text-sm font-medium">{status.chatIdMasked ?? "—"}</dd>
+          <dd className="mt-1 text-sm font-medium">{initialStatus.chatIdMasked ?? "—"}</dd>
         </div>
       </dl>
 
-      {status.lastError ? (
+      {initialStatus.lastError ? (
         <p className="mt-4 text-sm text-destructive" role="alert">
-          {status.lastError}
+          {initialStatus.lastError}
         </p>
       ) : null}
 
@@ -126,7 +171,7 @@ export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProp
           type="button"
           variant="outline"
           onClick={handleTest}
-          disabled={isTesting || !status.isVerified}
+          disabled={isTesting || !canSendTest}
           aria-label="Send test Telegram alert"
         >
           {isTesting ? "Sending…" : "Send test alert"}

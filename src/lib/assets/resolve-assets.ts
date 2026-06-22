@@ -154,7 +154,3 @@ export const resolveLegacyCryptoAssets = async (): Promise<ResolveAssetResult[]>
 
   return resolveAssetsBySymbols(rows.map((row) => row.symbol))
 }
-
-/** @deprecated Use resolvePendingAssets or resolveAssetsBySymbols */
-export const resolveAllSeedAssets = async (): Promise<ResolveAssetResult[]> =>
-  resolvePendingAssets()

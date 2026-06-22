@@ -29,7 +29,7 @@ Protected routes (see `src/middleware.ts`):
 Prefer:
 
 - Code review of components, layouts, and data loaders
-- `npm run lint` and `npm run typecheck` (or project equivalents)
+- `npm run lint` and `npm run build`
 - Component-level reasoning against Tripwire UI rules (scores, stale/null badges, labels)
 
 In the final response for protected UI work, state clearly that live visual inspection of protected routes was skipped because Clerk blocks unsigned agent sessions.

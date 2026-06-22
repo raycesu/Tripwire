@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { AddAssetsProvider } from "@/components/assets/add-assets-provider"
 import { DashboardNav } from "@/components/app-shell/dashboard-nav"
 import { LogoutButton } from "@/components/app-shell/logout-button"
@@ -17,7 +18,9 @@ export default async function DashboardLayout({
         <header className="relative z-10">
           <div className="mx-auto flex h-28 w-full max-w-6xl items-center justify-between gap-4 px-6">
             <div className="flex items-center gap-8">
-              <TripwireLogo />
+              <Link href="/dashboard" aria-label="Tripwire dashboard">
+                <TripwireLogo />
+              </Link>
               <DashboardNav />
             </div>
             <LogoutButton />

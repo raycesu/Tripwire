@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
+import type { Metadata } from "next"
+import { ClerkProvider } from "@clerk/nextjs"
 import { ui } from "@clerk/ui";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppTooltipProvider } from "@/components/ui/app-tooltip-provider";
@@ -17,9 +17,34 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+
 export const metadata: Metadata = {
-  title: "Tripwire",
-  description: "Contrarian asset score machine",
+  ...(siteUrl ? { metadataBase: new URL(siteUrl) } : {}),
+  title: {
+    default: "Tripwire",
+    template: "%s · Tripwire",
+  },
+  description:
+    "Contrarian asset score machine for crypto and equities. Tripwire scores your watchlist and sends Telegram alerts when opportunities qualify.",
+  openGraph: {
+    title: "Tripwire",
+    description:
+      "Contrarian asset score machine for crypto and equities. Know when to stop watching the market yourself.",
+    type: "website",
+    images: ["/hero.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tripwire",
+    description:
+      "Contrarian asset score machine for crypto and equities. Know when to stop watching the market yourself.",
+    images: ["/hero.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },

@@ -31,6 +31,8 @@ export type SourceMetadata = {
   interval: "1w"
   exchange?: string
   micCode?: string
+  fallbackFrom?: string
+  fallbackReason?: string
 }
 
 export type WeeklyOhlcvSuccess = {

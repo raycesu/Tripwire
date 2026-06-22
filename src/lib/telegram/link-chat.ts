@@ -5,7 +5,7 @@ import type { TelegramDeliveryStatus } from "@/db/schema"
 
 export type LinkTelegramChatResult =
   | { ok: true; userId: string }
-  | { ok: false; reason: "invalid_code" | "expired_code" | "already_used" }
+  | { ok: false; reason: "invalid_code" | "expired_code" }
 
 export const linkTelegramChat = async (
   connectCode: string,
