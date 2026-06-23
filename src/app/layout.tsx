@@ -32,14 +32,14 @@ export const metadata: Metadata = {
     description:
       "Contrarian asset score machine for crypto and equities. Know when to stop watching the market yourself.",
     type: "website",
-    images: ["/hero.png"],
+    images: ["/og.png"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Tripwire",
     description:
       "Contrarian asset score machine for crypto and equities. Know when to stop watching the market yourself.",
-    images: ["/hero.png"],
+    images: ["/og.png"],
   },
   robots: {
     index: true,
