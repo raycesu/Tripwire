@@ -128,21 +128,25 @@ describe("parseAlertMessageSectorScores", () => {
 })
 
 describe("buildAlertMessage", () => {
-  it("includes asset, sectors, and rule reason", () => {
+  it("uses a compact three-line format with bell, sectors, and rule", () => {
     const message = buildAlertMessage({
-      assetSymbol: "SOL",
-      rule: { scope: "composite", sector: null, operator: "above", threshold: "1.50" },
-      snapshot: baseSnapshot({ sector: "composite", score: "+1.63" }),
+      assetSymbol: "BTC",
+      rule: { scope: "composite", sector: null, operator: "above", threshold: "1.00" },
+      snapshot: baseSnapshot({ sector: "composite", score: "+1.04" }),
       sectorSnapshots: {
-        macro: baseSnapshot({ sector: "macro", score: "+1.20" }),
-        relativity: baseSnapshot({ sector: "relativity", score: "+1.50" }),
-        volume: baseSnapshot({ sector: "volume", score: "+1.82" }),
-        composite: baseSnapshot({ sector: "composite", score: "+1.63" }),
+        macro: baseSnapshot({ sector: "macro", score: "+1.60" }),
+        relativity: baseSnapshot({ sector: "relativity", score: "+2.00" }),
+        volume: baseSnapshot({ sector: "volume", score: "-0.49" }),
+        composite: baseSnapshot({ sector: "composite", score: "+1.04" }),
       },
     })
 
-    expect(message).toContain("Tripwire Alert")
-    expect(message).toContain("SOL composite is above 1.50")
-    expect(message).toContain('Composite above 1.5')
+    expect(message).toBe(
+      [
+        "🔔 BTC Alert – Composite: +1.04",
+        "Macro: +1.60  |  Relativity: +2.00  |  Volume: -0.49",
+        "Rule: Composite above 1.00",
+      ].join("\n")
+    )
   })
 })

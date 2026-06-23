@@ -1,10 +1,12 @@
 import type { AlertRule } from "@/db/schema"
 import type { ScoreSnapshotRecord } from "@/lib/scores/snapshots"
-import { formatRuleLabel, parseAlertOperator, type AlertScope } from "@/lib/alerts/types"
+import { parseAlertOperator } from "@/lib/alerts/types"
 import { formatScore } from "@/lib/scores/labels"
 import { logWarn } from "@/lib/logging/logger"
-import { formatScoreNumber } from "@/scoring/thresholds"
 import type { SectorName } from "@/scoring/types"
+
+const formatSectorLabel = (sector: SectorName): string =>
+  sector.charAt(0).toUpperCase() + sector.slice(1)
 
 export const parseSnapshotScore = (score: string | null): number | null => {
   if (score === null) {
@@ -96,17 +98,13 @@ export type BuildAlertMessageInput = {
 }
 
 export const buildAlertMessage = (input: BuildAlertMessageInput): string => {
-  const scope = input.rule.scope as AlertScope
   const sector = getRuleTargetSector(input.rule)
-  const triggeredValue = parseSnapshotScore(input.snapshot.score) ?? 0
-  const ruleLabel = formatRuleLabel({
-    scope,
-    sector: input.rule.sector as SectorName | null,
-    operator: parseAlertOperator(input.rule.operator),
-    threshold: Number(input.rule.threshold),
-  })
+  const sectorLabel = formatSectorLabel(sector)
+  const triggeredScore = formatScore(input.snapshot.score)
+  const thresholdLabel = Number(input.rule.threshold).toFixed(2)
+  const operator = parseAlertOperator(input.rule.operator)
 
-  const sectorLine = (name: SectorName, label: string): string => {
+  const sectorScorePart = (name: SectorName, label: string): string => {
     const snap = input.sectorSnapshots[name]
 
     if (!snap || snap.isNull || snap.score === null) {
@@ -116,19 +114,16 @@ export const buildAlertMessage = (input: BuildAlertMessageInput): string => {
     return `${label}: ${formatScore(snap.score)}`
   }
 
+  const sectorScoresLine = [
+    sectorScorePart("macro", "Macro"),
+    sectorScorePart("relativity", "Relativity"),
+    sectorScorePart("volume", "Volume"),
+  ].join("  |  ")
+
   return [
-    "Tripwire Alert",
-    "",
-    `${input.assetSymbol} ${sector} is above ${Number(input.rule.threshold).toFixed(2)}`,
-    "",
-    sectorLine("composite", "Composite"),
-    sectorLine("macro", "Macro"),
-    sectorLine("relativity", "Relativity"),
-    sectorLine("volume", "Volume"),
-    "",
-    `Triggered: ${formatScoreNumber(triggeredValue)}`,
-    "",
-    `Reason: Your alert rule "${ruleLabel}" matched the latest score update.`,
+    `🔔 ${input.assetSymbol} Alert – ${sectorLabel}: ${triggeredScore}`,
+    sectorScoresLine,
+    `Rule: ${sectorLabel} ${operator} ${thresholdLabel}`,
   ].join("\n")
 }
 
@@ -140,7 +135,7 @@ export type AlertMessageSectorScores = {
 }
 
 const parseAlertMessageScoreLine = (message: string, label: string): number | null => {
-  const regex = new RegExp(`^${label}:\\s*(.+)$`, "m")
+  const regex = new RegExp(`${label}:\\s*([+-]?\\d+\\.\\d+|—|-)`, "i")
   const match = message.match(regex)
 
   if (!match) {

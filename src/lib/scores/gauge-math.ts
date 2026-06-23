@@ -1,6 +1,10 @@
 export const SCORE_MIN = -2
 export const SCORE_MAX = 2
 
+const roundCoord = (value: number): number => Math.round(value * 100) / 100
+
+const formatCoord = (value: number): string => roundCoord(value).toFixed(2)
+
 export const parseScoreValue = (score: string | null): number | null => {
   if (score === null) {
     return null
@@ -45,8 +49,8 @@ export const scoreToArcPoint = (
   const angleDeg = scoreToNeedleAngle(score)
   const angleRad = (angleDeg * Math.PI) / 180
   return {
-    x: centerX + radius * Math.cos(angleRad),
-    y: centerY - radius * Math.sin(angleRad),
+    x: roundCoord(centerX + radius * Math.cos(angleRad)),
+    y: roundCoord(centerY - radius * Math.sin(angleRad)),
   }
 }
 
@@ -75,8 +79,8 @@ const polarToCartesian = (
 ): { x: number; y: number } => {
   const angleRad = (angleDeg * Math.PI) / 180
   return {
-    x: centerX + radius * Math.cos(angleRad),
-    y: centerY - radius * Math.sin(angleRad),
+    x: roundCoord(centerX + radius * Math.cos(angleRad)),
+    y: roundCoord(centerY - radius * Math.sin(angleRad)),
   }
 }
 
@@ -99,7 +103,7 @@ export const buildArcSegments = ({
     segments.push({
       startAngle,
       endAngle,
-      midScore: angleToScore(midAngle),
+      midScore: roundCoord(angleToScore(midAngle)),
     })
   }
 
@@ -122,10 +126,10 @@ export const describeArcSegmentPath = (
   const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0
 
   return [
-    `M ${outerStart.x} ${outerStart.y}`,
-    `A ${outerRadius} ${outerRadius} 0 ${largeArc} 0 ${outerEnd.x} ${outerEnd.y}`,
-    `L ${innerEnd.x} ${innerEnd.y}`,
-    `A ${innerRadius} ${innerRadius} 0 ${largeArc} 1 ${innerStart.x} ${innerStart.y}`,
+    `M ${formatCoord(outerStart.x)} ${formatCoord(outerStart.y)}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArc} 0 ${formatCoord(outerEnd.x)} ${formatCoord(outerEnd.y)}`,
+    `L ${formatCoord(innerEnd.x)} ${formatCoord(innerEnd.y)}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArc} 1 ${formatCoord(innerStart.x)} ${formatCoord(innerStart.y)}`,
     "Z",
   ].join(" ")
 }

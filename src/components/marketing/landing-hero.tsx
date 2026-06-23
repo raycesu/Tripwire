@@ -1,14 +1,14 @@
-import Image from "next/image"
-import { ButtonLink } from "@/components/ui/button"
+import { LandingCtaPrimary } from "@/components/marketing/landing-cta"
+import { HeroScorePreviewLoader } from "@/components/marketing/hero-score-preview-loader"
+import { LandingStats } from "@/components/marketing/landing-stats"
 
 export const LandingHero = () => {
   return (
     <section className="grid min-h-0 items-center gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12">
       <div className="flex flex-col gap-4 sm:gap-6">
         <h1 className="text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-          <span className="block text-white">Know when.</span>
-          <span className="block text-white">Stop</span>
-          <span className="block text-[oklch(0.65_0.24_25)]">watching.</span>
+          <span className="block text-white">You don&apos;t watch the market.</span>
+          <span className="block text-[oklch(0.65_0.24_25)]">Tripwire does.</span>
         </h1>
         <p className="max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">
           Tripwire scores your watchlist across backtested contrarian sectors and
@@ -16,21 +16,14 @@ export const LandingHero = () => {
           don&apos;t have to watch the market yourself.
         </p>
         <div>
-          <ButtonLink href="/sign-up" variant="outline" size="lg">
+          <LandingCtaPrimary href="/sign-up" size="hero" showArrow>
             Get started
-          </ButtonLink>
+          </LandingCtaPrimary>
         </div>
+        <LandingStats />
       </div>
-      <div className="flex min-h-0 justify-center lg:justify-end">
-        <Image
-          src="/hero.png"
-          alt="Tripwire score dashboard preview"
-          width={786}
-          height={731}
-          priority
-          sizes="(max-width: 1024px) 100vw, 512px"
-          className="h-auto w-full max-h-[min(46vh,520px)] max-w-md object-contain sm:max-h-[min(50vh,560px)] sm:max-w-lg lg:ml-auto"
-        />
+      <div className="flex min-h-0 w-full justify-center lg:justify-end">
+        <HeroScorePreviewLoader className="max-h-[min(68vh,720px)]" />
       </div>
     </section>
   )

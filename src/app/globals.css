@@ -425,4 +425,5 @@
     color: var(--accent);
     box-shadow: 0 0 16px oklch(1 0 0 / 8%);
   }
+
 }

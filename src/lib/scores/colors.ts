@@ -19,7 +19,10 @@ export const SCORE_COLOR_STOPS: Record<number, OklchColor> = {
   2: { l: 0.58, c: 0.22, h: 25 },
 }
 
-const formatOklch = ({ l, c, h }: OklchColor): string => `oklch(${l} ${c} ${h})`
+const formatOklch = ({ l, c, h }: OklchColor): string => {
+  const round = (value: number) => Math.round(value * 10000) / 10000
+  return `oklch(${round(l)} ${round(c)} ${round(h)})`
+}
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t
 
