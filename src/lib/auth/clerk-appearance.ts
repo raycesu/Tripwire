@@ -29,7 +29,7 @@ export const authPageClerkAppearance = {
   options: {
     socialButtonsPlacement: "bottom",
     socialButtonsVariant: "blockButton",
-  },
+  } as const,
   elements: {
     rootBox: "tw-auth-root",
     cardBox: "tw-auth-card-box",
