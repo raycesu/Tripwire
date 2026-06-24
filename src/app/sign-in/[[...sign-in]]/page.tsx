@@ -20,7 +20,7 @@ export default function SignInPage() {
       <AuthCard
         icon={LogIn}
         title="Sign in with email"
-        subtitle="Welcome back. Your watchlist awaits."
+        subtitle="Your signals are waiting."
       >
         <SignIn
           routing="path"

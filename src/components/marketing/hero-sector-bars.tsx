@@ -5,23 +5,56 @@ import { getScoreTextColorClass, SCORE_TRACK_GRADIENT } from "@/lib/scores/color
 import { formatScore } from "@/lib/scores/labels"
 import { scoreToNormalizedPosition } from "@/lib/scores/gauge-math"
 
+const SECTORS = ["Macro", "Relativity", "Volume"] as const
+
+type SectorLabel = (typeof SECTORS)[number]
+
 type HeroSectorBarsProps = {
   animatedScore: number
+  compositeTargetScore: number
+  sectorScores: Record<SectorLabel, number>
+  startScore?: number
   className?: string
 }
 
-const SECTORS = ["Macro", "Relativity", "Volume"] as const
+const SCORE_MIN = -2
+
+const interpolateSectorScore = (
+  animatedScore: number,
+  compositeTargetScore: number,
+  sectorTargetScore: number,
+  startScore: number
+): number => {
+  if (compositeTargetScore === startScore) {
+    return sectorTargetScore
+  }
+
+  const progress = (animatedScore - startScore) / (compositeTargetScore - startScore)
+  return startScore + (sectorTargetScore - startScore) * progress
+}
 
 const formatAnimatedScore = (score: number): string => {
   return formatScore(score.toFixed(2))
 }
 
-export const HeroSectorBars = ({ animatedScore, className }: HeroSectorBarsProps) => {
+export const HeroSectorBars = ({
+  animatedScore,
+  compositeTargetScore,
+  sectorScores,
+  startScore = SCORE_MIN,
+  className,
+}: HeroSectorBarsProps) => {
   return (
     <div className={cn("flex min-w-0 flex-1 flex-col justify-center gap-3", className)}>
       {SECTORS.map((label) => {
-        const percent = scoreToNormalizedPosition(animatedScore) * 100
-        const formattedScore = formatAnimatedScore(animatedScore)
+        const sectorScore = interpolateSectorScore(
+          animatedScore,
+          compositeTargetScore,
+          sectorScores[label],
+          startScore
+        )
+        const percent = scoreToNormalizedPosition(sectorScore) * 100
+        const formattedScore = formatAnimatedScore(sectorScore)
 
         return (
           <div key={label} className="flex flex-col gap-1.5">
@@ -30,7 +63,7 @@ export const HeroSectorBars = ({ animatedScore, className }: HeroSectorBarsProps
               <span
                 className={cn(
                   "font-mono text-xs tabular-nums",
-                  getScoreTextColorClass(animatedScore)
+                  getScoreTextColorClass(sectorScore)
                 )}
               >
                 {formattedScore}

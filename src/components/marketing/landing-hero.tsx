@@ -11,9 +11,8 @@ export const LandingHero = () => {
           <span className="block text-[oklch(0.65_0.24_25)]">Tripwire does.</span>
         </h1>
         <p className="max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">
-          Tripwire scores your watchlist across backtested contrarian sectors and
-          sends a Telegram alert the moment a real opportunity shows up, so you
-          don&apos;t have to watch the market yourself.
+          Composite scores across 3 backtested sectors. Telegram alert the moment
+          it matters.
         </p>
         <div>
           <LandingCtaPrimary href="/sign-up" size="hero" showArrow>

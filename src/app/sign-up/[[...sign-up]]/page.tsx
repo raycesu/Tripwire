@@ -20,7 +20,7 @@ export default function SignUpPage() {
       <AuthCard
         icon={UserPlus}
         title="Create your account"
-        subtitle="Start scoring contrarian opportunities."
+        subtitle="Score contrarian opportunities."
       >
         <SignUp
           routing="path"
