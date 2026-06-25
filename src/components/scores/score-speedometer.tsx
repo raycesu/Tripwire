@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { WATCHLIST_SCORE_GAUGE_CLASS } from "@/components/dashboard/watchlist-table-layout"
 import {
   scoreToOklch,
 } from "@/lib/scores/colors"
@@ -21,6 +22,7 @@ type ScoreSpeedometerProps = {
   snapshot: ScoreSnapshotView | null
   symbol?: string
   className?: string
+  variant?: "default" | "inline"
 }
 
 const CX = 100
@@ -74,6 +76,79 @@ const getInterpretationFill = (tone: ReturnType<typeof getScoreToneFromString>):
   }
 
   return INTERPRETATION_FILL[tone]
+}
+
+const getInlineScoreFill = (
+  numericScore: number | null,
+  isUnavailable: boolean
+): string => {
+  if (isUnavailable || numericScore === null) {
+    return "oklch(0.52 0.008 270)"
+  }
+
+  if (numericScore >= 1.5) {
+    return "oklch(0.65 0.24 25)"
+  }
+
+  if (numericScore >= 1) {
+    return "oklch(0.58 0.18 25)"
+  }
+
+  return "oklch(0.72 0.008 270)"
+}
+
+const getInlineScoreFontSize = (formattedScore: string): number => {
+  if (formattedScore.length <= 4) {
+    return 26
+  }
+
+  if (formattedScore.length <= 5) {
+    return 23
+  }
+
+  return 20
+}
+
+const InlineCenterReadout = ({
+  formattedScore,
+  numericScore,
+  isUnavailable,
+}: {
+  formattedScore: string
+  numericScore: number | null
+  isUnavailable: boolean
+}) => {
+  const fill = getInlineScoreFill(numericScore, isUnavailable)
+  const isHighlight = numericScore !== null && numericScore >= 1
+  const fontSize = isUnavailable ? 20 : getInlineScoreFontSize(formattedScore)
+
+  if (isUnavailable) {
+    return (
+      <text
+        x={CX}
+        y={SCORE_BASELINE_Y - 6}
+        textAnchor="middle"
+        fill={fill}
+        className="font-mono font-medium tabular-nums"
+        style={{ fontSize: `${fontSize}px` }}
+      >
+        —
+      </text>
+    )
+  }
+
+  return (
+    <text
+      x={CX}
+      y={SCORE_BASELINE_Y - 6}
+      textAnchor="middle"
+      fill={fill}
+      className={cn("font-mono tabular-nums", isHighlight ? "font-semibold" : "font-medium")}
+      style={{ fontSize: `${fontSize}px` }}
+    >
+      {formattedScore}
+    </text>
+  )
 }
 
 const CenterReadout = ({
@@ -163,7 +238,13 @@ const CenterReadout = ({
   )
 }
 
-export const ScoreSpeedometer = ({ snapshot, symbol, className }: ScoreSpeedometerProps) => {
+export const ScoreSpeedometer = ({
+  snapshot,
+  symbol,
+  className,
+  variant = "default",
+}: ScoreSpeedometerProps) => {
+  const isInline = variant === "inline"
   const isUnavailable = !snapshot || snapshot.isNull
   const numericScore = snapshot && !snapshot.isNull ? parseScoreValue(snapshot.score) : null
   const isStale = snapshot?.isStale ?? false
@@ -189,12 +270,15 @@ export const ScoreSpeedometer = ({ snapshot, symbol, className }: ScoreSpeedomet
       className={cn(
         "relative flex flex-col items-center",
         isStale && !isUnavailable && "opacity-75",
+        isInline && cn(WATCHLIST_SCORE_GAUGE_CLASS, "shrink-0"),
         className
       )}
     >
       <svg
         viewBox="0 4 200 108"
-        className="h-auto w-full max-w-[240px] -mb-1"
+        className={cn(
+          isInline ? WATCHLIST_SCORE_GAUGE_CLASS : "h-auto w-full max-w-[240px] -mb-1"
+        )}
         role="img"
         aria-label={ariaLabel}
       >
@@ -267,42 +351,53 @@ export const ScoreSpeedometer = ({ snapshot, symbol, className }: ScoreSpeedomet
         />
 
         {/* Scale labels beside diameter endpoints */}
-        {DIAMETER_LABELS.map(({ score, label, textAnchor, xOffset }) => {
-          const pos = getDiameterLabelPosition(score, xOffset)
-          return (
-            <text
-              key={score}
-              x={pos.x}
-              y={pos.y}
-              textAnchor={textAnchor}
-              fill={ARC_LABEL_FILL}
-              className="font-mono text-[10px] font-semibold tabular-nums"
-              style={{ fontSize: "10px" }}
-            >
-              {label}
-            </text>
-          )
-        })}
+        {!isInline
+          ? DIAMETER_LABELS.map(({ score, label, textAnchor, xOffset }) => {
+              const pos = getDiameterLabelPosition(score, xOffset)
+              return (
+                <text
+                  key={score}
+                  x={pos.x}
+                  y={pos.y}
+                  textAnchor={textAnchor}
+                  fill={ARC_LABEL_FILL}
+                  className="font-mono text-[10px] font-semibold tabular-nums"
+                  style={{ fontSize: "10px" }}
+                >
+                  {label}
+                </text>
+              )
+            })
+          : null}
 
-        {/* Center readout */}
-        <CenterReadout
-          interpretation={interpretation}
-          formattedScore={formattedScore}
-          tone={tone}
-          isUnavailable={isUnavailable}
-        />
+        {isInline ? (
+          <InlineCenterReadout
+            formattedScore={formattedScore}
+            numericScore={numericScore}
+            isUnavailable={isUnavailable}
+          />
+        ) : (
+          <CenterReadout
+            interpretation={interpretation}
+            formattedScore={formattedScore}
+            tone={tone}
+            isUnavailable={isUnavailable}
+          />
+        )}
       </svg>
 
-      <div className="flex flex-col items-center gap-0.5 text-center">
-        {isUnavailable && snapshot?.nullReason ? (
-          <span className="max-w-[200px] text-xs text-muted-foreground">{snapshot.nullReason}</span>
-        ) : null}
-        {isStale && !isUnavailable ? (
-          <span className="text-[10px] font-medium uppercase tracking-wider text-amber-400/90">
-            Stale
-          </span>
-        ) : null}
-      </div>
+      {!isInline ? (
+        <div className="flex flex-col items-center gap-0.5 text-center">
+          {isUnavailable && snapshot?.nullReason ? (
+            <span className="max-w-[200px] text-xs text-muted-foreground">{snapshot.nullReason}</span>
+          ) : null}
+          {isStale && !isUnavailable ? (
+            <span className="text-[10px] font-medium uppercase tracking-wider text-amber-400/90">
+              Stale
+            </span>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }

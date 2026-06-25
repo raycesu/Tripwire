@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import type { TelegramConnectionStatus } from "@/lib/telegram/queries"
 
 type TelegramConnectPanelProps = {
@@ -11,6 +12,39 @@ type TelegramConnectPanelProps = {
 
 const CONNECT_POLL_INTERVAL_MS = 3000
 const CONNECT_POLL_DURATION_MS = 60000
+
+type StatusVariant = "connected" | "warning" | "destructive" | "default"
+
+const TelegramStatusBadge = ({
+  label,
+  variant,
+}: {
+  label: string
+  variant: StatusVariant
+}) => {
+  const dotClassName = cn(
+    "size-1.5 shrink-0 rounded-full",
+    variant === "connected" && "bg-chart-1",
+    variant === "warning" && "bg-accent",
+    variant === "destructive" && "bg-destructive",
+    variant === "default" && "bg-white/40"
+  )
+
+  const pillClassName = cn(
+    "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium",
+    variant === "connected" && "border-chart-1/30 bg-chart-1/10 text-chart-1",
+    variant === "warning" && "border-accent/30 bg-accent/10 text-accent",
+    variant === "destructive" && "border-destructive/30 bg-destructive/10 text-destructive",
+    variant === "default" && "border-white/20 bg-white/5 text-white/60"
+  )
+
+  return (
+    <span className={pillClassName}>
+      <span className={dotClassName} aria-hidden="true" />
+      {label}
+    </span>
+  )
+}
 
 export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProps) => {
   const router = useRouter()
@@ -104,72 +138,84 @@ export const TelegramConnectPanel = ({ initialStatus }: TelegramConnectPanelProp
     }
   }
 
-  const statusLabel = (() => {
-    if (initialStatus.isVerified && initialStatus.deliveryStatus === "connected") {
-      return "Connected"
+  const isConnected =
+    initialStatus.isVerified && initialStatus.deliveryStatus === "connected"
+
+  const needsReconnect =
+    isConnected ||
+    initialStatus.deliveryStatus === "blocked" ||
+    initialStatus.deliveryStatus === "invalid_chat"
+
+  const connectLabel = isConnecting
+    ? "Connecting…"
+    : needsReconnect
+      ? "Reconnect"
+      : "Connect Telegram"
+
+  const statusMeta = ((): { label: string; variant: StatusVariant } => {
+    if (isConnected) {
+      return { label: "Connected", variant: "connected" }
     }
 
     if (initialStatus.deliveryStatus === "blocked") {
-      return "Blocked — reconnect required"
+      return { label: "Blocked", variant: "destructive" }
     }
 
     if (initialStatus.deliveryStatus === "invalid_chat") {
-      return "Invalid chat — reconnect required"
+      return { label: "Invalid chat", variant: "destructive" }
     }
 
-    return "Not connected"
+    return { label: "Not connected", variant: "default" }
   })()
 
   const canSendTest = initialStatus.isVerified || initialStatus.deliveryStatus === "connected"
+  const feedback = error ?? initialStatus.lastError ?? message
 
   return (
-    <section className="surface-card p-6">
-      <h2 className="text-lg font-semibold text-foreground">Telegram alerts</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Connect the shared Tripwire bot to receive opportunity alerts on Telegram.
+    <section className="p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-foreground">Telegram Alerts</h2>
+        <TelegramStatusBadge label={statusMeta.label} variant={statusMeta.variant} />
+      </div>
+
+      <div className="mt-4 border-t border-white/10" />
+
+      <p className="mt-4 text-sm">
+        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Chat ID:
+        </span>{" "}
+        <span className="font-medium text-foreground" aria-label="Masked Telegram chat ID">
+          {initialStatus.chatIdMasked ?? "—"}
+        </span>
       </p>
 
-      <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-        <div>
-          <dt className="text-xs uppercase tracking-wider text-muted-foreground">Status</dt>
-          <dd className="mt-1 text-sm font-medium">{statusLabel}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wider text-muted-foreground">Chat ID</dt>
-          <dd className="mt-1 text-sm font-medium">{initialStatus.chatIdMasked ?? "—"}</dd>
-        </div>
-      </dl>
-
-      {initialStatus.lastError ? (
-        <p className="mt-4 text-sm text-destructive" role="alert">
-          {initialStatus.lastError}
-        </p>
-      ) : null}
-
-      {message ? (
-        <p className="mt-4 text-sm text-muted-foreground" role="status">
-          {message}
-        </p>
-      ) : null}
-
-      {error ? (
-        <p className="mt-4 text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Button
-          type="button"
-          onClick={handleConnect}
-          disabled={isConnecting}
-          aria-label="Connect Telegram account"
+      {feedback ? (
+        <p
+          className={cn(
+            "mt-3 text-xs",
+            error || initialStatus.lastError ? "text-destructive" : "text-muted-foreground"
+          )}
+          role={error || initialStatus.lastError ? "alert" : "status"}
         >
-          {isConnecting ? "Connecting…" : "Connect Telegram"}
-        </Button>
+          {feedback}
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex flex-nowrap items-center gap-2.5">
         <Button
           type="button"
           variant="outline"
+          className="h-9 shrink-0 rounded-full border-white/30 bg-gradient-to-b from-white/[0.1] to-white/[0.03] px-4 text-sm font-medium whitespace-nowrap text-white/90 shadow-[inset_0_1px_0_oklch(1_0_0/18%)] hover:border-white/45 hover:from-white/[0.14] hover:to-white/[0.06] hover:text-white disabled:opacity-40"
+          onClick={handleConnect}
+          disabled={isConnecting}
+          aria-label={needsReconnect ? "Reconnect Telegram account" : "Connect Telegram account"}
+        >
+          {connectLabel}
+        </Button>
+        <Button
+          type="button"
+          variant="default"
+          className="h-9 shrink-0 rounded-full px-4 text-sm font-medium whitespace-nowrap"
           onClick={handleTest}
           disabled={isTesting || !canSendTest}
           aria-label="Send test Telegram alert"

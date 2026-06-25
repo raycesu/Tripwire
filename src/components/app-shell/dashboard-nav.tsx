@@ -2,13 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { AddAssetsDialog } from "@/components/assets/add-assets-dialog"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Watchlist" },
   { href: "/alerts", label: "Alerts" },
-  { href: "/settings", label: "Settings" },
 ] as const
 
 export const DashboardNav = () => {
@@ -34,7 +32,6 @@ export const DashboardNav = () => {
           </Link>
         )
       })}
-      <AddAssetsDialog />
     </nav>
   )
 }

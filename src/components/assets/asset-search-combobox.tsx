@@ -89,7 +89,7 @@ export const AssetSearchCombobox = ({
 
         const data = (await response.json()) as { results: AssetSearchResult[] }
         setResults(data.results)
-        setActiveIndex(data.results.length > 0 ? 0 : -1)
+        setActiveIndex(-1)
         setIsOpen(true)
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -354,12 +354,12 @@ export const AssetSearchCombobox = ({
                       tabIndex={0}
                       className={cn(
                         "flex w-full items-center justify-between gap-3 rounded-lg px-1 py-2.5 text-left text-sm transition-colors hover:bg-white/6",
-                        activeIndex === index ? "bg-white/8" : undefined,
+                        activeIndex === index && "bg-white/8",
                         layout !== "panel" && "px-4 py-3 hover:bg-white/8"
                       )}
                       onClick={() => handleResultClick(result.symbol)}
                       onKeyDown={(event) => handleResultKeyDown(event, result.symbol)}
-                      onMouseEnter={() => setActiveIndex(index)}
+                      onMouseEnter={() => setActiveIndex(-1)}
                     >
                       {layout === "panel" ? (
                         <span className="min-w-0 truncate">

@@ -71,7 +71,7 @@ export const HeroSectorBars = ({
             </div>
 
             <div
-              className="relative h-4 w-full overflow-hidden rounded-full border border-silver/15 bg-black/40"
+              className="relative h-4 w-full overflow-hidden rounded-full bg-black/40 shadow-[inset_0_0_0_0.5px_oklch(1_0_0/12%)]"
               role="img"
               aria-label={`${label}: ${formattedScore}`}
             >

@@ -149,6 +149,7 @@
   }
   html {
     @apply font-sans;
+    scrollbar-gutter: stable;
   }
 
   html.landing-active,
@@ -413,6 +414,29 @@
       inset 0 1px 0 oklch(1 0 0 / 18%),
       0 16px 48px oklch(0 0 0 / 60%),
       0 0 32px oklch(1 0 0 / 8%);
+  }
+
+  .tripwire-tooltip-surface {
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background-color: #1c1c1e;
+    color: #d1d1d1;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(8px);
+  }
+
+  .tripwire-tooltip-arrow {
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background-color: #1c1c1e;
+    fill: #1c1c1e;
+  }
+
+  .popover-chromeless {
+    width: auto !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
   }
 
   .icon-silver-glow {

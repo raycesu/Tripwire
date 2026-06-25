@@ -66,6 +66,10 @@ export const scoreToOklch = (score: number): string => {
 export const SCORE_TRACK_GRADIENT =
   "linear-gradient(to right, var(--score-silver-dark), var(--score-silver-mid) 50%, var(--score-red-bright))"
 
+/** Inline gradient stops for sector bars (avoids var() resolution issues in clipped layers). */
+export const SCORE_TRACK_GRADIENT_INLINE =
+  "linear-gradient(to right, oklch(0.38 0.01 270), oklch(0.62 0.008 270) 50%, oklch(0.65 0.24 25))"
+
 export const getScoreToneColorClasses = (tone: ScoreTone): string => {
   switch (tone) {
     case "strong_opportunity":

@@ -1,9 +1,10 @@
-import Link from "next/link"
+import { ChevronLeft } from "lucide-react"
 import { notFound } from "next/navigation"
 import { AssetDetailHeader } from "@/components/assets/asset-detail-header"
 import { TradingViewChartSection } from "@/components/assets/trading-view-chart-section"
 import { ScoreHistorySection } from "@/components/scores/score-history-section"
-import { WatchlistToggleButton } from "@/components/watchlist/watchlist-toggle-button"
+import { ButtonLink } from "@/components/ui/button"
+import { AssetDetailActionsMenu } from "@/components/assets/asset-detail-actions-menu"
 import { ensureAsset } from "@/lib/assets/ensure-asset"
 import { isAssetOnWatchlist } from "@/lib/assets/queries"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
@@ -38,10 +39,17 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to watchlist
-        </Link>
-        <WatchlistToggleButton
+        <ButtonLink
+          href="/dashboard"
+          variant="outline"
+          size="sm"
+          className="gap-1.5 rounded-full"
+          aria-label="Back to watchlist"
+        >
+          <ChevronLeft aria-hidden="true" />
+          Back
+        </ButtonLink>
+        <AssetDetailActionsMenu
           assetId={asset.id}
           symbol={asset.symbol}
           isOnWatchlist={onWatchlist}

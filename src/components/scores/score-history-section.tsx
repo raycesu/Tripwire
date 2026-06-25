@@ -120,10 +120,14 @@ export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProp
               <YAxis domain={[-2, 2]} ticks={[-2, -1, 0, 1, 2]} tick={{ fontSize: 11 }} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "var(--card)",
-                  border: "1px solid var(--border)",
+                  backgroundColor: "rgba(28, 28, 30, 0.95)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
                   borderRadius: "0.5rem",
+                  color: "#d1d1d1",
+                  backdropFilter: "blur(8px)",
                 }}
+                labelStyle={{ color: "#d1d1d1" }}
+                itemStyle={{ color: "#d1d1d1" }}
                 formatter={(value) => {
                   const numeric = typeof value === "number" ? value : Number(value)
 
