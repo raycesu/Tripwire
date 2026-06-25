@@ -24,8 +24,7 @@ export const SettingsMenu = ({ initialStatus }: SettingsMenuProps) => {
         type="button"
         className={cn(
           "inline-flex size-8 items-center justify-center rounded-full transition-all",
-          "nav-link-idle border border-white/28 bg-white/[0.04]",
-          open && "nav-link-active"
+          "nav-link-active"
         )}
         aria-label="Settings"
         aria-expanded={open}

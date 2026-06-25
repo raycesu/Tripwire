@@ -11,7 +11,7 @@ export const LogoutButton = () => {
         type="button"
         className={cn(
           "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-all",
-          "nav-link-idle border border-white/28 bg-white/[0.04]"
+          "nav-link-idle"
         )}
         aria-label="Log out"
       >

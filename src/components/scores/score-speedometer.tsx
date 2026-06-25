@@ -23,7 +23,18 @@ type ScoreSpeedometerProps = {
   symbol?: string
   className?: string
   variant?: "default" | "inline"
+  size?: "default" | "large"
 }
+
+const GAUGE_SIZE_CLASS = {
+  default: "h-auto w-full max-w-[240px] -mb-1",
+  large: "h-auto w-full max-w-[360px] -mb-1",
+} as const
+
+const GAUGE_VIEWBOX = {
+  default: "0 4 200 108",
+  large: "0 20 200 92",
+} as const
 
 const CX = 100
 const CY = 98
@@ -243,6 +254,7 @@ export const ScoreSpeedometer = ({
   symbol,
   className,
   variant = "default",
+  size = "default",
 }: ScoreSpeedometerProps) => {
   const isInline = variant === "inline"
   const isUnavailable = !snapshot || snapshot.isNull
@@ -275,10 +287,8 @@ export const ScoreSpeedometer = ({
       )}
     >
       <svg
-        viewBox="0 4 200 108"
-        className={cn(
-          isInline ? WATCHLIST_SCORE_GAUGE_CLASS : "h-auto w-full max-w-[240px] -mb-1"
-        )}
+        viewBox={isInline ? GAUGE_VIEWBOX.default : GAUGE_VIEWBOX[size]}
+        className={cn(isInline ? WATCHLIST_SCORE_GAUGE_CLASS : GAUGE_SIZE_CLASS[size])}
         role="img"
         aria-label={ariaLabel}
       >

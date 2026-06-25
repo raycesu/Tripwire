@@ -25,7 +25,7 @@ export default async function DashboardPage() {
           <EmptyState
             variant="plain"
             title="No assets on your watchlist"
-            description="Click Add asset above, search for a symbol, open its detail page, then add it to your watchlist."
+            description="Click Add above, search for a symbol, open its detail page, then add it to your watchlist."
           />
         ) : (
           <>

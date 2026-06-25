@@ -89,8 +89,8 @@ export const AssetDetailActionsMenu = ({
         <PopoverTrigger
           type="button"
           className={cn(
-            "inline-flex size-7 items-center justify-center rounded-full border border-white/28 bg-white/[0.04] text-white/90 transition-all",
-            open && "border-white/45 bg-white/10"
+            "inline-flex size-7 items-center justify-center rounded-full transition-all",
+            "nav-link-active"
           )}
           aria-label={`${symbol} actions`}
           aria-expanded={open}

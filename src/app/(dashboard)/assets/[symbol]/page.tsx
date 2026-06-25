@@ -1,10 +1,11 @@
 import { ChevronLeft } from "lucide-react"
+import Link from "next/link"
 import { notFound } from "next/navigation"
+import { AssetDetailActionsMenu } from "@/components/assets/asset-detail-actions-menu"
 import { AssetDetailHeader } from "@/components/assets/asset-detail-header"
 import { TradingViewChartSection } from "@/components/assets/trading-view-chart-section"
 import { ScoreHistorySection } from "@/components/scores/score-history-section"
-import { ButtonLink } from "@/components/ui/button"
-import { AssetDetailActionsMenu } from "@/components/assets/asset-detail-actions-menu"
+import { cn } from "@/lib/utils"
 import { ensureAsset } from "@/lib/assets/ensure-asset"
 import { isAssetOnWatchlist } from "@/lib/assets/queries"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
@@ -38,25 +39,30 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <ButtonLink
-          href="/dashboard"
-          variant="outline"
-          size="sm"
-          className="gap-1.5 rounded-full"
-          aria-label="Back to watchlist"
-        >
-          <ChevronLeft aria-hidden="true" />
-          Back
-        </ButtonLink>
-        <AssetDetailActionsMenu
-          assetId={asset.id}
-          symbol={asset.symbol}
-          isOnWatchlist={onWatchlist}
-        />
-      </div>
-
-      <AssetDetailHeader asset={asset} summary={snapshotSummary} />
+      <AssetDetailHeader
+        asset={asset}
+        summary={snapshotSummary}
+        leadingAction={
+          <Link
+            href="/dashboard"
+            className={cn(
+              "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[0.8rem] font-medium transition-all",
+              "nav-link-active"
+            )}
+            aria-label="Back to watchlist"
+          >
+            <ChevronLeft className="size-3.5" aria-hidden="true" />
+            Back
+          </Link>
+        }
+        trailingAction={
+          <AssetDetailActionsMenu
+            assetId={asset.id}
+            symbol={asset.symbol}
+            isOnWatchlist={onWatchlist}
+          />
+        }
+      />
 
       <TradingViewChartSection
         tradingViewSymbol={tradingViewSymbol}
