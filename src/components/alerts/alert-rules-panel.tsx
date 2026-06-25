@@ -1,9 +1,8 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { AlertRulesBulkBar } from "@/components/alerts/alert-rules-bulk-bar"
-import { AlertRulesHeader } from "@/components/alerts/alert-rules-header"
 import { AlertRulesPagination } from "@/components/alerts/alert-rules-pagination"
 import { AlertRulesTable } from "@/components/alerts/alert-rules-table"
 import {
@@ -16,19 +15,16 @@ import {
   formatConditionPill,
   type AlertRuleDto,
   type AlertRuleInitialValues,
+  type AlertWatchlistOption,
 } from "@/lib/alerts/types"
 
 const PAGE_SIZE = 8
 
-type WatchlistOption = {
-  assetId: string
-  symbol: string
-  name: string
-}
-
 type AlertRulesPanelProps = {
   initialRules: AlertRuleDto[]
-  watchlist: WatchlistOption[]
+  watchlist: AlertWatchlistOption[]
+  onRulesCountsChange?: (counts: { activeCount: number; totalCount: number }) => void
+  onBindNewRule?: (openCreate: () => void) => void
 }
 
 const filterRules = (
@@ -65,7 +61,12 @@ const filterRules = (
   })
 }
 
-export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProps) => {
+export const AlertRulesPanel = ({
+  initialRules,
+  watchlist,
+  onRulesCountsChange,
+  onBindNewRule,
+}: AlertRulesPanelProps) => {
   const router = useRouter()
   const [rules, setRules] = useState(initialRules)
   const [searchQuery, setSearchQuery] = useState("")
@@ -84,6 +85,10 @@ export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProp
 
   const activeCount = rules.filter((rule) => rule.isEnabled).length
   const totalCount = rules.length
+
+  useEffect(() => {
+    onRulesCountsChange?.({ activeCount, totalCount })
+  }, [activeCount, totalCount, onRulesCountsChange])
 
   const filteredRules = useMemo(
     () => filterRules(rules, filterTab, searchQuery),
@@ -113,6 +118,10 @@ export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProp
     setCreateSession((current) => current + 1)
     setIsCreateOpen(true)
   }
+
+  useEffect(() => {
+    onBindNewRule?.(handleOpenCreate)
+  })
 
   const handleDuplicate = (rule: AlertRuleDto) => {
     const sector =
@@ -312,73 +321,67 @@ export const AlertRulesPanel = ({ initialRules, watchlist }: AlertRulesPanelProp
     }
   }
 
-  if (watchlist.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Add assets to your watchlist before creating alert rules.
-      </p>
-    )
-  }
-
   return (
     <>
       <section className="flex flex-col gap-4">
-        <AlertRulesHeader
-          activeCount={activeCount}
-          totalCount={totalCount}
-          onNewRule={handleOpenCreate}
-        />
-
-        <AlertRulesToolbar
-          searchQuery={searchQuery}
-          filterTab={filterTab}
-          onSearchChange={handleSearchChange}
-          onFilterChange={handleFilterChange}
-        />
-
-        <AlertRulesBulkBar
-          selectedCount={selectedIds.size}
-          isBusy={isBulkBusy}
-          onDisable={handleBulkDisable}
-          onDelete={handleBulkDelete}
-          onClear={() => setSelectedIds(new Set())}
-        />
-
-        {error ? (
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        {rules.length === 0 ? (
+        {watchlist.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No alert rules yet. Click <span className="text-foreground">New rule</span> to create
-            one.
-          </p>
-        ) : filteredRules.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No rules match your search or filters.
+            Add assets to your watchlist before creating alert rules.
           </p>
         ) : (
           <>
-            <AlertRulesTable
-              rules={pageRules}
-              selectedIds={selectedIds}
-              togglingRuleId={togglingRuleId}
-              onToggleSelect={handleToggleSelect}
-              onToggleSelectAll={handleToggleSelectAll}
-              onToggleEnabled={handleToggle}
-              onEdit={setEditingRule}
-              onDuplicate={handleDuplicate}
-              onDelete={handleDelete}
+            <AlertRulesToolbar
+              searchQuery={searchQuery}
+              filterTab={filterTab}
+              onSearchChange={handleSearchChange}
+              onFilterChange={handleFilterChange}
             />
-            <AlertRulesPagination
-              currentPage={safePage}
-              totalPages={totalPages}
-              totalItems={filteredRules.length}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
+
+            <AlertRulesBulkBar
+              selectedCount={selectedIds.size}
+              isBusy={isBulkBusy}
+              onDisable={handleBulkDisable}
+              onDelete={handleBulkDelete}
+              onClear={() => setSelectedIds(new Set())}
             />
+
+            {error ? (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            {rules.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No alert rules yet. Click <span className="text-foreground">New</span> to create
+                one.
+              </p>
+            ) : filteredRules.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No rules match your search or filters.
+              </p>
+            ) : (
+              <>
+                <AlertRulesTable
+                  rules={pageRules}
+                  selectedIds={selectedIds}
+                  togglingRuleId={togglingRuleId}
+                  onToggleSelect={handleToggleSelect}
+                  onToggleSelectAll={handleToggleSelectAll}
+                  onToggleEnabled={handleToggle}
+                  onEdit={setEditingRule}
+                  onDuplicate={handleDuplicate}
+                  onDelete={handleDelete}
+                />
+                <AlertRulesPagination
+                  currentPage={safePage}
+                  totalPages={totalPages}
+                  totalItems={filteredRules.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            )}
           </>
         )}
       </section>

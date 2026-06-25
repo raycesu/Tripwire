@@ -15,16 +15,19 @@ const PopoverContent = ({
   side = "bottom",
   sideOffset = 8,
   className,
+  positionerClassName,
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) => {
+  > & {
+    positionerClassName?: string
+  }) => {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
-        className="isolate z-50 outline-none"
+        className={cn("isolate z-50 outline-none", positionerClassName)}
         align={align}
         alignOffset={alignOffset}
         side={side}

@@ -1,5 +1,4 @@
-import { AlertHistoryTimeline } from "@/components/alerts/alert-history-timeline"
-import { AlertRulesPanel } from "@/components/alerts/alert-rules-panel"
+import { AlertsPageContent } from "@/components/alerts/alerts-page-content"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
 import { listAlertEventsForUser, listAlertRulesForUser } from "@/lib/alerts/queries"
 import { toAlertRuleDto } from "@/lib/alerts/types"
@@ -17,18 +16,20 @@ export default async function AlertsPage() {
     assetId: item.assetId,
     symbol: item.asset.symbol,
     name: item.asset.name,
+    assetType: item.asset.assetType,
   }))
 
   const assetSymbols = [...new Set(alertEvents.map((event) => event.assetSymbol))].sort()
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-6 py-8">
       <h1 className="sr-only">Alerts</h1>
-      <AlertRulesPanel initialRules={rules.map(toAlertRuleDto)} watchlist={watchlistOptions} />
-
-      <section>
-        <AlertHistoryTimeline events={alertEvents} assetSymbols={assetSymbols} />
-      </section>
+      <AlertsPageContent
+        initialRules={rules.map(toAlertRuleDto)}
+        watchlist={watchlistOptions}
+        alertEvents={alertEvents}
+        assetSymbols={assetSymbols}
+      />
     </main>
   )
 }

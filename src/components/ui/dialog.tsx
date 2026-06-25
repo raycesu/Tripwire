@@ -32,20 +32,39 @@ const DialogViewport = ({ className, ...props }: DialogPrimitive.Viewport.Props)
 
 type DialogPopupProps = DialogPrimitive.Popup.Props & {
   opaque?: boolean
+  scrollable?: boolean
+  surface?: "glass" | "add-assets" | "rule-builder"
 }
 
-const DialogPopup = ({ className, opaque = false, ...props }: DialogPopupProps) => (
-  <DialogPrimitive.Popup
-    className={cn(
-      "flex flex-col overflow-hidden rounded-2xl outline-none",
-      opaque
+const DialogPopup = ({
+  className,
+  opaque = false,
+  scrollable = false,
+  surface,
+  ...props
+}: DialogPopupProps) => {
+  const resolvedSurface =
+    surface ?? (opaque ? "add-assets" : "glass")
+
+  const surfaceClassName =
+    resolvedSurface === "rule-builder"
+      ? "tripwire-rule-builder-popup shadow-none"
+      : resolvedSurface === "add-assets"
         ? "tripwire-add-assets-popup p-4 shadow-none"
-        : "glass-popover tripwire-dialog-popup shadow-none",
-      className
-    )}
-    {...props}
-  />
-)
+        : "glass-popover tripwire-dialog-popup shadow-none"
+
+  return (
+    <DialogPrimitive.Popup
+      className={cn(
+        "flex flex-col rounded-2xl outline-none",
+        scrollable ? "overflow-x-hidden overflow-y-auto" : "overflow-hidden",
+        surfaceClassName,
+        className
+      )}
+      {...props}
+    />
+  )
+}
 
 const DialogTitle = ({ className, ...props }: DialogPrimitive.Title.Props) => (
   <DialogPrimitive.Title

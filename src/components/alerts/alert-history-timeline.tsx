@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 
 type AlertHistoryTimelineProps = {
   events: AlertEventDto[]
-  assetSymbols: string[]
+  filterSymbol: string
 }
 
 const PAGE_SIZE = 8
@@ -61,8 +61,10 @@ const SectorChip = ({ label, score }: SectorChipProps) => (
   </span>
 )
 
-export const AlertHistoryTimeline = ({ events, assetSymbols }: AlertHistoryTimelineProps) => {
-  const [filterSymbol, setFilterSymbol] = useState<string>("all")
+export const AlertHistoryTimeline = ({
+  events,
+  filterSymbol,
+}: AlertHistoryTimelineProps) => {
   const [currentPage, setCurrentPage] = useState(1)
 
   const filteredEvents = useMemo(() => {
@@ -81,11 +83,6 @@ export const AlertHistoryTimeline = ({ events, assetSymbols }: AlertHistoryTimel
     return filteredEvents.slice(start, start + PAGE_SIZE)
   }, [filteredEvents, safePage])
 
-  const handleFilterChange = (symbol: string) => {
-    setFilterSymbol(symbol)
-    setCurrentPage(1)
-  }
-
   if (events.length === 0) {
     return (
       <EmptyState
@@ -99,25 +96,6 @@ export const AlertHistoryTimeline = ({ events, assetSymbols }: AlertHistoryTimel
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Alert history</h2>
-        {assetSymbols.length > 1 ? (
-          <select
-            value={filterSymbol}
-            onChange={(event) => handleFilterChange(event.target.value)}
-            className="rounded-md border border-border bg-muted/40 px-2 py-1 text-sm text-foreground"
-            aria-label="Filter alert history by asset"
-          >
-            <option value="all">All assets</option>
-            {assetSymbols.map((symbol) => (
-              <option key={symbol} value={symbol}>
-                {symbol}
-              </option>
-            ))}
-          </select>
-        ) : null}
-      </div>
-
       {filteredEvents.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           No alerts for this asset yet.

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import { formatConditionPill, type AlertRuleDto } from "@/lib/alerts/types"
+import { AssetTypePill } from "@/components/alerts/asset-type-pill"
 import { cn } from "@/lib/utils"
 
 type AlertRulesTableProps = {
@@ -25,18 +26,6 @@ type AlertRulesTableProps = {
   onDelete: (ruleId: string) => void
 }
 
-const AssetTypePill = ({ assetType }: { assetType: AlertRuleDto["assetType"] }) => (
-  <span
-    className={cn(
-      "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-      assetType === "crypto"
-        ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-        : "border-sky-400/30 bg-sky-400/10 text-sky-300"
-    )}
-  >
-    {assetType}
-  </span>
-)
 
 export const AlertRulesTable = ({
   rules,

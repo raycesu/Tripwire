@@ -24,6 +24,13 @@ export type AlertRuleInitialValues = {
   threshold: number
 }
 
+export type AlertWatchlistOption = {
+  assetId: string
+  symbol: string
+  name: string
+  assetType: AssetType
+}
+
 export type AlertRuleDto = {
   id: string
   assetId: string
@@ -107,4 +114,33 @@ export const formatConditionPill = (
     : String(rule.threshold)
 
   return `${sectorLabel} > ${thresholdLabel}`
+}
+
+const formatPreviewThreshold = (threshold: number): string => {
+  const prefix = threshold > 0 ? "+" : ""
+  return `${prefix}${threshold.toFixed(1)}`
+}
+
+export const buildAlertRulePreview = ({
+  symbol,
+  scope,
+  sector,
+  threshold,
+}: {
+  symbol: string
+  scope: AlertScope
+  sector: SectorName | null
+  threshold: number
+}): string => {
+  const thresholdLabel = formatPreviewThreshold(threshold)
+
+  if (scope === "composite") {
+    return `Alert me when ${symbol} composite score goes above ${thresholdLabel}`
+  }
+
+  const sectorLabel = sector
+    ? sector.charAt(0).toUpperCase() + sector.slice(1)
+    : "Sector"
+
+  return `Alert me when ${symbol} ${sectorLabel} sector goes above ${thresholdLabel}`
 }

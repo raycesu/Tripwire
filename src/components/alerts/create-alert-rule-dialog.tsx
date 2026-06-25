@@ -1,43 +1,61 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
+import { createPortal } from "react-dom"
+import { ThresholdSliderInput } from "@/components/alerts/threshold-slider-input"
+import { WatchlistAssetCombobox } from "@/components/alerts/watchlist-asset-combobox"
 import { Button } from "@/components/ui/button"
+import { PageActionButton } from "@/components/ui/page-action-button"
+import { SegmentedControl } from "@/components/ui/segmented-control"
 import {
-  Dialog,
-  DialogBackdrop,
-  DialogDescription,
-  DialogPopup,
-  DialogPortal,
-  DialogTitle,
-  DialogViewport,
-} from "@/components/ui/dialog"
-import type { AlertRuleInitialValues } from "@/lib/alerts/types"
-import type { AlertRuleDto } from "@/lib/alerts/types"
-
-type WatchlistOption = {
-  assetId: string
-  symbol: string
-  name: string
-}
+  buildAlertRulePreview,
+  type AlertRuleDto,
+  type AlertRuleInitialValues,
+  type AlertWatchlistOption,
+} from "@/lib/alerts/types"
 
 type CreateAlertRuleDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  watchlist: WatchlistOption[]
+  watchlist: AlertWatchlistOption[]
   onRuleCreated: (rule: AlertRuleDto) => void
   formSession: number
   initialValues?: AlertRuleInitialValues | null
 }
 
-const defaultAssetId = (watchlist: WatchlistOption[], initialValues?: AlertRuleInitialValues | null) =>
-  initialValues?.assetId ?? watchlist[0]?.assetId ?? ""
+const defaultAssetId = (
+  watchlist: AlertWatchlistOption[],
+  initialValues?: AlertRuleInitialValues | null
+) => initialValues?.assetId ?? watchlist[0]?.assetId ?? ""
+
+const SCOPE_OPTIONS = [
+  { value: "composite" as const, label: "Composite" },
+  { value: "sector" as const, label: "Sector" },
+]
+
+const SECTOR_OPTIONS = [
+  { value: "macro" as const, label: "Macro" },
+  { value: "relativity" as const, label: "Relativity" },
+  { value: "volume" as const, label: "Volume" },
+]
+
+const emptySubscribe = () => () => {}
+
+const useIsClient = () =>
+  useSyncExternalStore(emptySubscribe, () => true, () => false)
 
 type CreateAlertRuleFormProps = {
-  watchlist: WatchlistOption[]
+  watchlist: AlertWatchlistOption[]
   initialValues?: AlertRuleInitialValues | null
   onRuleCreated: (rule: AlertRuleDto) => void
   onClose: () => void
 }
+
+const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+    {children}
+  </span>
+)
 
 const CreateAlertRuleForm = ({
   watchlist,
@@ -57,12 +75,26 @@ const CreateAlertRuleForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isDuplicate = initialValues !== null && initialValues !== undefined
 
+  const selectedAsset = watchlist.find((item) => item.assetId === assetId) ?? watchlist[0]
+  const thresholdValue = Number(threshold)
+
+  const previewText = useMemo(() => {
+    if (!selectedAsset || Number.isNaN(thresholdValue)) {
+      return "Alert me when your selected asset crosses the threshold."
+    }
+
+    return buildAlertRulePreview({
+      symbol: selectedAsset.symbol,
+      scope,
+      sector: scope === "sector" ? sector : null,
+      threshold: thresholdValue,
+    })
+  }, [scope, sector, selectedAsset, thresholdValue])
+
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault()
     setIsSubmitting(true)
     setError(null)
-
-    const thresholdValue = Number(threshold)
 
     if (Number.isNaN(thresholdValue) || thresholdValue < -2 || thresholdValue > 2) {
       setError("Threshold must be between -2 and 2")
@@ -104,87 +136,101 @@ const CreateAlertRuleForm = ({
     }
   }
 
+  const submitLabel = isSubmitting
+    ? "Creating…"
+    : isDuplicate
+      ? "Create duplicate"
+      : "Create"
+
+  const dialogTitle = isDuplicate ? "Duplicate alert rule" : "Create alert rule"
+
   return (
-    <form onSubmit={handleCreate} aria-label={isDuplicate ? "Duplicate alert rule" : "Create alert rule"}>
-      <DialogTitle>{isDuplicate ? "Duplicate alert rule" : "Create alert rule"}</DialogTitle>
-      <DialogDescription className="mt-1">
-        Level-based alerts fire on every fresh qualifying score update.
-      </DialogDescription>
+    <form
+      onSubmit={handleCreate}
+      className="space-y-4"
+      style={{ padding: "1.25rem" }}
+      aria-label={dialogTitle}
+    >
+      <header className="border-b border-white/10 pb-3">
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          {dialogTitle}
+        </h2>
+        <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+          Choose a watchlist asset and the score level that should trigger a Telegram alert.
+        </p>
+      </header>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-muted-foreground">Asset</span>
-          <select
-            value={assetId}
-            onChange={(event) => setAssetId(event.target.value)}
-            className="h-9 rounded-lg border border-border bg-background px-3"
-            required
-          >
-            {watchlist.map((item) => (
-              <option key={item.assetId} value={item.assetId}>
-                {item.symbol} — {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="space-y-4">
+        <section className="space-y-2">
+          <FieldLabel>Asset</FieldLabel>
+          <WatchlistAssetCombobox items={watchlist} value={assetId} onChange={setAssetId} />
+        </section>
 
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-muted-foreground">Scope</span>
-          <select
+        <section className="space-y-2">
+          <FieldLabel>Scope</FieldLabel>
+          <SegmentedControl
+            options={SCOPE_OPTIONS}
             value={scope}
-            onChange={(event) => setScope(event.target.value as "composite" | "sector")}
-            className="h-9 rounded-lg border border-border bg-background px-3"
-          >
-            <option value="composite">Composite</option>
-            <option value="sector">Sector</option>
-          </select>
-        </label>
+            onChange={setScope}
+            ariaLabel="Alert scope"
+            className="border-white/12 bg-black/20"
+          />
+        </section>
 
         {scope === "sector" ? (
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-muted-foreground">Sector</span>
-            <select
+          <section className="space-y-2">
+            <FieldLabel>Sector</FieldLabel>
+            <SegmentedControl
+              options={SECTOR_OPTIONS}
               value={sector}
-              onChange={(event) =>
-                setSector(event.target.value as "macro" | "relativity" | "volume")
-              }
-              className="h-9 rounded-lg border border-border bg-background px-3"
-            >
-              <option value="macro">Macro</option>
-              <option value="relativity">Relativity</option>
-              <option value="volume">Volume</option>
-            </select>
-          </label>
+              onChange={setSector}
+              ariaLabel="Alert sector"
+              className="border-white/12 bg-black/20"
+            />
+          </section>
         ) : null}
 
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-muted-foreground">Threshold (above)</span>
-          <input
-            type="number"
-            step="0.01"
-            min={-2}
-            max={2}
-            value={threshold}
-            onChange={(event) => setThreshold(event.target.value)}
-            className="h-9 rounded-lg border border-border bg-background px-3"
-            required
-          />
-        </label>
+        <section className="space-y-2">
+          <FieldLabel>Threshold (above)</FieldLabel>
+          <ThresholdSliderInput value={threshold} onChange={setThreshold} />
+        </section>
       </div>
 
+      <section
+        className="rounded-xl border border-white/10 bg-black/20 px-4 py-3"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          Rule preview
+        </p>
+        <p className="mt-1.5 text-sm leading-6 text-foreground">{previewText}</p>
+      </section>
+
       {error ? (
-        <p className="mt-4 text-sm text-destructive" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating…" : isDuplicate ? "Create duplicate" : "Create rule"}
-        </Button>
-        <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 w-full"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
           Cancel
         </Button>
+        <PageActionButton
+          type="submit"
+          disabled={isSubmitting}
+          className="h-10 w-full justify-center"
+          aria-label={isDuplicate ? "Create duplicate alert rule" : "Create alert rule"}
+        >
+          {submitLabel}
+        </PageActionButton>
       </div>
     </form>
   )
@@ -198,28 +244,83 @@ export const CreateAlertRuleDialog = ({
   formSession,
   initialValues = null,
 }: CreateAlertRuleDialogProps) => {
+  const mounted = useIsClient()
+
   const handleClose = () => {
     onOpenChange(false)
   }
 
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onOpenChange(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [onOpenChange, open])
+
+  if (!open || !mounted) {
+    return null
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPortal>
-        <DialogBackdrop />
-        <DialogViewport>
-          <DialogPopup opaque className="w-full max-w-md p-6">
-            {open ? (
-              <CreateAlertRuleForm
-                key={`${formSession}-${initialValues?.assetId ?? "new"}`}
-                watchlist={watchlist}
-                initialValues={initialValues}
-                onRuleCreated={onRuleCreated}
-                onClose={handleClose}
-              />
-            ) : null}
-          </DialogPopup>
-        </DialogViewport>
-      </DialogPortal>
-    </Dialog>
+    createPortal(
+      <div
+        role="presentation"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9998,
+          display: "grid",
+          placeItems: "center",
+          padding: "1rem",
+          backgroundColor: "rgba(0, 0, 0, 0.82)",
+          backdropFilter: "blur(6px)",
+        }}
+        onClick={handleClose}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={initialValues ? "Duplicate alert rule" : "Create alert rule"}
+          style={{
+            position: "relative",
+            zIndex: 9999,
+            width: "min(calc(100vw - 2rem), 32rem)",
+            maxHeight: "calc(100dvh - 2rem)",
+            overflow: "visible",
+            borderRadius: "1rem",
+            border: "1px solid rgba(255, 255, 255, 0.24)",
+            background:
+              "linear-gradient(180deg, rgba(32, 32, 32, 1) 0%, rgba(18, 18, 18, 1) 100%)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 28px 90px rgba(0, 0, 0, 0.82)",
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <CreateAlertRuleForm
+            key={`${formSession}-${initialValues?.assetId ?? "new"}`}
+            watchlist={watchlist}
+            initialValues={initialValues}
+            onRuleCreated={onRuleCreated}
+            onClose={handleClose}
+          />
+        </div>
+      </div>,
+      document.body
+    )
   )
 }
