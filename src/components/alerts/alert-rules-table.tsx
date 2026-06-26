@@ -1,15 +1,8 @@
 "use client"
 
-import { MoreVertical } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
+import { AlertRuleRowActionsMenu } from "@/components/alerts/alert-rule-row-actions-menu"
 import { formatConditionPill, type AlertRuleDto } from "@/lib/alerts/types"
 import { AssetTypePill } from "@/components/alerts/asset-type-pill"
 import { cn } from "@/lib/utils"
@@ -107,7 +100,7 @@ export const AlertRulesTable = ({
                   </div>
                 </td>
                 <td className="py-3.5 pr-4 align-middle">
-                  <span className="inline-flex rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs text-white/80">
+                  <span className="inline-flex rounded-full border border-white/15 bg-white/5 px-3 py-[0.15rem] text-sm text-white/80">
                     {formatConditionPill(rule)}
                   </span>
                 </td>
@@ -125,27 +118,12 @@ export const AlertRulesTable = ({
                   />
                 </td>
                 <td className="py-3.5 align-middle">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Actions for ${rule.assetSymbol}`}
-                        />
-                      }
-                    >
-                      <MoreVertical aria-hidden="true" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-36">
-                      <DropdownMenuItem onClick={() => onEdit(rule)}>Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onDuplicate(rule)}>Duplicate</DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onClick={() => onDelete(rule.id)}>
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <AlertRuleRowActionsMenu
+                    assetSymbol={rule.assetSymbol}
+                    onEdit={() => onEdit(rule)}
+                    onDuplicate={() => onDuplicate(rule)}
+                    onDelete={() => onDelete(rule.id)}
+                  />
                 </td>
               </tr>
             )

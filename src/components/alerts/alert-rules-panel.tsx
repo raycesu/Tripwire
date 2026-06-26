@@ -18,7 +18,7 @@ import {
   type AlertWatchlistOption,
 } from "@/lib/alerts/types"
 
-const PAGE_SIZE = 8
+const PAGE_SIZE = 10
 
 type AlertRulesPanelProps = {
   initialRules: AlertRuleDto[]

@@ -48,19 +48,6 @@ const SEARCH_PANEL_STYLE: React.CSSProperties = {
   padding: "0.5rem",
 }
 
-const SEARCH_INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  height: "2.5rem",
-  borderRadius: "0.5rem",
-  border: "1px solid rgba(255, 255, 255, 0.15)",
-  background: "#141414",
-  padding: "0 0.75rem 0 2.25rem",
-  color: "rgba(255, 255, 255, 0.95)",
-  fontSize: "0.875rem",
-  lineHeight: "1.25rem",
-  outline: "none",
-}
-
 const LIST_STYLE: React.CSSProperties = {
   maxHeight: "10rem",
   overflowY: "auto",
@@ -261,24 +248,11 @@ export const WatchlistAssetCombobox = ({
       {isOpen ? (
         <div style={DROPDOWN_STYLE}>
           <div style={SEARCH_PANEL_STYLE}>
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-white/45"
-                style={{
-                  pointerEvents: "none",
-                  position: "absolute",
-                  top: "50%",
-                  left: "0.75rem",
-                  width: "1rem",
-                  height: "1rem",
-                  transform: "translateY(-50%)",
-                  color: "rgba(255, 255, 255, 0.45)",
-                }}
-                aria-hidden="true"
-              />
+            <div className="flex h-10 items-center gap-2.5 rounded-lg border border-white/15 bg-[#141414] px-3 focus-within:border-white/30">
+              <Search className="size-4 shrink-0 text-white/45" aria-hidden="true" />
               <input
                 ref={inputRef}
-                type="search"
+                type="text"
                 value={query}
                 role="combobox"
                 aria-expanded={isOpen}
@@ -290,8 +264,7 @@ export const WatchlistAssetCombobox = ({
                 aria-label="Search watchlist assets"
                 placeholder="Search ticker or name…"
                 autoComplete="off"
-                className="placeholder:text-white/40 focus:border-white/30"
-                style={SEARCH_INPUT_STYLE}
+                className="min-w-0 flex-1 bg-transparent text-sm text-white/95 outline-none placeholder:text-white/40"
                 onChange={(event) => {
                   setQuery(event.target.value)
                   setActiveIndex(-1)

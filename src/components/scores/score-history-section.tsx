@@ -30,6 +30,8 @@ const SECTOR_OPTIONS: { value: keyof HistoryBySector; label: string }[] = [
   { value: "volume", label: "Volume" },
 ]
 
+const CHART_HEIGHT_PX = 256
+
 const formatChartDate = (date: Date): string => {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
 }
@@ -113,8 +115,8 @@ export const ScoreHistorySection = ({ historyBySector }: ScoreHistorySectionProp
           Not enough history yet. After several scoring runs you will see a trend line here.
         </p>
       ) : (
-        <div className="h-64 w-full" role="img" aria-label={`${sector} score history chart`}>
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-64 w-full min-w-0" role="img" aria-label={`${sector} score history chart`}>
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX} minWidth={0}>
             <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
               <YAxis domain={[-2, 2]} ticks={[-2, -1, 0, 1, 2]} tick={{ fontSize: 11 }} />

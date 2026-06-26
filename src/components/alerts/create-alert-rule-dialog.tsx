@@ -1,10 +1,16 @@
 "use client"
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
-import { createPortal } from "react-dom"
+import { useMemo, useState } from "react"
 import { ThresholdSliderInput } from "@/components/alerts/threshold-slider-input"
 import { WatchlistAssetCombobox } from "@/components/alerts/watchlist-asset-combobox"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogPopup,
+  DialogPortal,
+  DialogViewport,
+} from "@/components/ui/dialog"
 import { PageActionButton } from "@/components/ui/page-action-button"
 import { SegmentedControl } from "@/components/ui/segmented-control"
 import {
@@ -38,11 +44,6 @@ const SECTOR_OPTIONS = [
   { value: "relativity" as const, label: "Relativity" },
   { value: "volume" as const, label: "Volume" },
 ]
-
-const emptySubscribe = () => () => {}
-
-const useIsClient = () =>
-  useSyncExternalStore(emptySubscribe, () => true, () => false)
 
 type CreateAlertRuleFormProps = {
   watchlist: AlertWatchlistOption[]
@@ -142,7 +143,7 @@ const CreateAlertRuleForm = ({
       ? "Create duplicate"
       : "Create"
 
-  const dialogTitle = isDuplicate ? "Duplicate alert rule" : "Create alert rule"
+  const dialogTitle = isDuplicate ? "Duplicate Alert Rule" : "Create Alert Rule"
 
   return (
     <form
@@ -152,12 +153,9 @@ const CreateAlertRuleForm = ({
       aria-label={dialogTitle}
     >
       <header className="border-b border-white/10 pb-3">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
           {dialogTitle}
         </h2>
-        <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-          Choose a watchlist asset and the score level that should trigger a Telegram alert.
-        </p>
       </header>
 
       <div className="space-y-4">
@@ -227,7 +225,7 @@ const CreateAlertRuleForm = ({
           type="submit"
           disabled={isSubmitting}
           className="h-10 w-full justify-center"
-          aria-label={isDuplicate ? "Create duplicate alert rule" : "Create alert rule"}
+          aria-label={isDuplicate ? "Create duplicate Alert Rule" : "Create Alert Rule"}
         >
           {submitLabel}
         </PageActionButton>
@@ -244,83 +242,28 @@ export const CreateAlertRuleDialog = ({
   formSession,
   initialValues = null,
 }: CreateAlertRuleDialogProps) => {
-  const mounted = useIsClient()
-
   const handleClose = () => {
     onOpenChange(false)
   }
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onOpenChange(false)
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [onOpenChange, open])
-
-  if (!open || !mounted) {
-    return null
-  }
-
   return (
-    createPortal(
-      <div
-        role="presentation"
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 9998,
-          display: "grid",
-          placeItems: "center",
-          padding: "1rem",
-          backgroundColor: "rgba(0, 0, 0, 0.82)",
-          backdropFilter: "blur(6px)",
-        }}
-        onClick={handleClose}
-      >
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={initialValues ? "Duplicate alert rule" : "Create alert rule"}
-          style={{
-            position: "relative",
-            zIndex: 9999,
-            width: "min(calc(100vw - 2rem), 32rem)",
-            maxHeight: "calc(100dvh - 2rem)",
-            overflow: "visible",
-            borderRadius: "1rem",
-            border: "1px solid rgba(255, 255, 255, 0.24)",
-            background:
-              "linear-gradient(180deg, rgba(32, 32, 32, 1) 0%, rgba(18, 18, 18, 1) 100%)",
-            boxShadow:
-              "inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 28px 90px rgba(0, 0, 0, 0.82)",
-          }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <CreateAlertRuleForm
-            key={`${formSession}-${initialValues?.assetId ?? "new"}`}
-            watchlist={watchlist}
-            initialValues={initialValues}
-            onRuleCreated={onRuleCreated}
-            onClose={handleClose}
-          />
-        </div>
-      </div>,
-      document.body
-    )
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        <DialogBackdrop />
+        <DialogViewport>
+          <DialogPopup surface="rule-builder" scrollable className="w-full p-0 shadow-none">
+            {open ? (
+              <CreateAlertRuleForm
+                key={`${formSession}-${initialValues?.assetId ?? "new"}`}
+                watchlist={watchlist}
+                initialValues={initialValues}
+                onRuleCreated={onRuleCreated}
+                onClose={handleClose}
+              />
+            ) : null}
+          </DialogPopup>
+        </DialogViewport>
+      </DialogPortal>
+    </Dialog>
   )
 }

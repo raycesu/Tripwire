@@ -5,6 +5,12 @@ import { z } from "zod"
 
 export type AlertScope = "composite" | "sector"
 
+const MINUTES_PER_DAY = 24 * 60
+
+export const cooldownMinutesToDays = (minutes: number) => minutes / MINUTES_PER_DAY
+
+export const cooldownDaysToMinutes = (days: number) => days * MINUTES_PER_DAY
+
 const alertOperatorSchema = z.literal("above")
 
 export const parseAlertOperator = (operator: string): "above" => {

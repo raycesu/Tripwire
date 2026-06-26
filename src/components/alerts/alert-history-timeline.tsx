@@ -14,7 +14,7 @@ type AlertHistoryTimelineProps = {
   filterSymbol: string
 }
 
-const PAGE_SIZE = 8
+const PAGE_SIZE = 10
 
 const statusVariant = (
   status: string
@@ -138,7 +138,7 @@ export const AlertHistoryTimeline = ({
                       <div className="flex shrink-0 items-center">
                         <Badge
                           variant={statusVariant(event.telegramStatus)}
-                          className="rounded-full px-1.5 py-0 text-[10px]"
+                          className="rounded-full px-2 py-0.5 text-xs"
                         >
                           {formatStatusLabel(event.telegramStatus)}
                         </Badge>

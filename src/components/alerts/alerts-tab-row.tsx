@@ -1,6 +1,7 @@
 "use client"
 
 import { Plus } from "lucide-react"
+import { AlertHistoryAssetFilter } from "@/components/alerts/alert-history-asset-filter"
 import { Badge } from "@/components/ui/badge"
 import { PageActionButton } from "@/components/ui/page-action-button"
 import { cn } from "@/lib/utils"
@@ -18,26 +19,57 @@ type AlertsTabRowProps = {
   onHistoryFilterChange: (symbol: string) => void
 }
 
+type AlertsTabButtonProps = {
+  isActive: boolean
+  label: string
+  panelId: string
+  badge: React.ReactNode
+  onSelect: () => void
+}
+
 const handleTabKeyDown = (
   event: React.KeyboardEvent<HTMLButtonElement>,
-  tab: AlertsPageTab,
-  onTabChange: (tab: AlertsPageTab) => void
+  onSelect: () => void
 ) => {
   if (event.key !== "Enter" && event.key !== " ") {
     return
   }
 
   event.preventDefault()
-  onTabChange(tab)
+  onSelect()
 }
 
-const tabButtonClassName = (isActive: boolean) =>
-  cn(
-    "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors",
-    isActive
-      ? "bg-white/8 font-medium text-foreground"
-      : "bg-transparent font-normal text-muted-foreground"
-  )
+const AlertsTabButton = ({
+  isActive,
+  label,
+  panelId,
+  badge,
+  onSelect,
+}: AlertsTabButtonProps) => (
+  <button
+    type="button"
+    role="tab"
+    tabIndex={0}
+    aria-selected={isActive}
+    aria-controls={panelId}
+    className="appearance-none border-0 bg-transparent p-0"
+    onClick={onSelect}
+    onKeyDown={(event) => handleTabKeyDown(event, onSelect)}
+  >
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-base leading-tight transition-colors",
+        isActive
+          ? "font-medium text-foreground"
+          : "font-normal text-muted-foreground hover:bg-white/5 hover:text-foreground"
+      )}
+      style={isActive ? { backgroundColor: "#333333" } : undefined}
+    >
+      {label}
+      {badge}
+    </span>
+  </button>
+)
 
 export const AlertsTabRow = ({
   activeTab,
@@ -50,45 +82,30 @@ export const AlertsTabRow = ({
   onHistoryFilterChange,
 }: AlertsTabRowProps) => (
   <div className="flex flex-wrap items-center justify-between gap-3">
-    <div
-      className="flex items-center gap-2"
-      role="tablist"
-      aria-label="Alerts sections"
-    >
-      <button
-        type="button"
-        role="tab"
-        tabIndex={0}
-        aria-selected={activeTab === "rules"}
-        aria-controls="alerts-rules-panel"
-        className={tabButtonClassName(activeTab === "rules")}
-        onClick={() => onTabChange("rules")}
-        onKeyDown={(event) => handleTabKeyDown(event, "rules", onTabChange)}
-      >
-        Rules
-        <Badge
-          variant={activeTab === "rules" ? "success" : "default"}
-          className="rounded-full px-1.5 py-0 text-[10px]"
-        >
-          {activeRulesCount} active
-        </Badge>
-      </button>
+    <div className="flex items-center gap-2" role="tablist" aria-label="Alerts sections">
+      <AlertsTabButton
+        isActive={activeTab === "rules"}
+        label="Rules"
+        panelId="alerts-rules-panel"
+        badge={
+          <Badge variant="success" className="rounded-full px-2 py-0.5 text-[10px]">
+            {activeRulesCount} active
+          </Badge>
+        }
+        onSelect={() => onTabChange("rules")}
+      />
 
-      <button
-        type="button"
-        role="tab"
-        tabIndex={0}
-        aria-selected={activeTab === "history"}
-        aria-controls="alerts-history-panel"
-        className={tabButtonClassName(activeTab === "history")}
-        onClick={() => onTabChange("history")}
-        onKeyDown={(event) => handleTabKeyDown(event, "history", onTabChange)}
-      >
-        History
-        <Badge variant="default" className="rounded-full px-1.5 py-0 text-[10px]">
-          {historyTotalCount} total
-        </Badge>
-      </button>
+      <AlertsTabButton
+        isActive={activeTab === "history"}
+        label="History"
+        panelId="alerts-history-panel"
+        badge={
+          <Badge variant="default" className="rounded-full px-2 py-0.5 text-[10px]">
+            {historyTotalCount} total
+          </Badge>
+        }
+        onSelect={() => onTabChange("history")}
+      />
     </div>
 
     {activeTab === "rules" ? (
@@ -97,19 +114,11 @@ export const AlertsTabRow = ({
         New
       </PageActionButton>
     ) : assetSymbols.length > 1 ? (
-      <select
+      <AlertHistoryAssetFilter
+        assetSymbols={assetSymbols}
         value={historyFilterSymbol}
-        onChange={(event) => onHistoryFilterChange(event.target.value)}
-        className="rounded-md border border-border bg-muted/40 px-2 py-1 text-sm text-foreground"
-        aria-label="Filter alert history by asset"
-      >
-        <option value="all">All assets</option>
-        {assetSymbols.map((symbol) => (
-          <option key={symbol} value={symbol}>
-            {symbol}
-          </option>
-        ))}
-      </select>
+        onChange={onHistoryFilterChange}
+      />
     ) : null}
   </div>
 )

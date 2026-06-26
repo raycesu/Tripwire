@@ -1,17 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogBackdrop,
-  DialogDescription,
   DialogPopup,
   DialogPortal,
-  DialogTitle,
   DialogViewport,
 } from "@/components/ui/dialog"
-import { formatConditionPill, type AlertRuleDto } from "@/lib/alerts/types"
+import { PageActionButton } from "@/components/ui/page-action-button"
+import {
+  cooldownDaysToMinutes,
+  cooldownMinutesToDays,
+  formatConditionPill,
+  type AlertRuleDto,
+} from "@/lib/alerts/types"
 
 type EditAlertRuleDialogProps = {
   rule: AlertRuleDto | null
@@ -59,9 +63,23 @@ type EditAlertRuleFormProps = {
 
 const EditAlertRuleForm = ({ rule, onRuleUpdated, onClose }: EditAlertRuleFormProps) => {
   const [threshold, setThreshold] = useState(String(rule.threshold))
-  const [cooldownMinutes, setCooldownMinutes] = useState(String(rule.cooldownMinutes))
+  const [cooldownDays, setCooldownDays] = useState(String(cooldownMinutesToDays(rule.cooldownMinutes)))
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const thresholdValue = Number(threshold)
+
+  const previewCondition = useMemo(() => {
+    if (Number.isNaN(thresholdValue)) {
+      return formatConditionPill(rule)
+    }
+
+    return formatConditionPill({
+      scope: rule.scope,
+      sector: rule.sector,
+      threshold: thresholdValue,
+    })
+  }, [rule, thresholdValue])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -69,7 +87,7 @@ const EditAlertRuleForm = ({ rule, onRuleUpdated, onClose }: EditAlertRuleFormPr
     setError(null)
 
     const thresholdValue = Number(threshold)
-    const cooldownValue = Number(cooldownMinutes)
+    const cooldownValue = Number(cooldownDays)
 
     if (Number.isNaN(thresholdValue) || thresholdValue < -2 || thresholdValue > 2) {
       setError("Threshold must be between -2 and 2")
@@ -78,7 +96,7 @@ const EditAlertRuleForm = ({ rule, onRuleUpdated, onClose }: EditAlertRuleFormPr
     }
 
     if (Number.isNaN(cooldownValue) || cooldownValue < 0 || !Number.isInteger(cooldownValue)) {
-      setError("Cooldown must be a whole number of minutes, zero or greater")
+      setError("Cooldown must be a whole number of days, zero or greater")
       setIsSubmitting(false)
       return
     }
@@ -89,7 +107,7 @@ const EditAlertRuleForm = ({ rule, onRuleUpdated, onClose }: EditAlertRuleFormPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           threshold: thresholdValue,
-          cooldownMinutes: cooldownValue,
+          cooldownMinutes: cooldownDaysToMinutes(cooldownValue),
         }),
       })
 
@@ -110,18 +128,20 @@ const EditAlertRuleForm = ({ rule, onRuleUpdated, onClose }: EditAlertRuleFormPr
   }
 
   return (
-    <form onSubmit={handleSubmit} aria-label="Edit alert rule">
-      <DialogTitle>Edit alert rule</DialogTitle>
-      <DialogDescription className="mt-1">
-        Update threshold and cooldown. Asset and scope cannot be changed here.
-      </DialogDescription>
+    <form onSubmit={handleSubmit} className="space-y-4" aria-label="Edit alert rule">
+      <header className="border-b border-white/10 pb-3">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Edit Alert Rule</h2>
+      </header>
 
-      <div className="mt-6 space-y-4">
-        <div className="rounded-lg border border-border/60 bg-white/5 px-3 py-2.5 text-sm">
+      <div className="space-y-4">
+        <div
+          className="rounded-lg border border-border/60 bg-white/5 px-3 py-2.5 text-sm"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           <p className="font-medium text-foreground">
-            {rule.assetSymbol} — {formatConditionPill(rule)}
+            {rule.assetSymbol} — {previewCondition}
           </p>
-          <p className="text-xs text-muted-foreground">{rule.assetName}</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -140,13 +160,13 @@ const EditAlertRuleForm = ({ rule, onRuleUpdated, onClose }: EditAlertRuleFormPr
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-muted-foreground">Cooldown (minutes)</span>
+            <span className="text-muted-foreground">Cooldown (days)</span>
             <input
               type="number"
               step="1"
               min={0}
-              value={cooldownMinutes}
-              onChange={(event) => setCooldownMinutes(event.target.value)}
+              value={cooldownDays}
+              onChange={(event) => setCooldownDays(event.target.value)}
               className="h-9 rounded-lg border border-border bg-background px-3"
               required
             />
@@ -155,15 +175,19 @@ const EditAlertRuleForm = ({ rule, onRuleUpdated, onClose }: EditAlertRuleFormPr
       </div>
 
       {error ? (
-        <p className="mt-4 text-sm text-destructive" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button type="submit" disabled={isSubmitting}>
+      <div className="flex flex-wrap gap-2">
+        <PageActionButton
+          type="submit"
+          disabled={isSubmitting}
+          aria-label="Save alert rule changes"
+        >
           {isSubmitting ? "Saving…" : "Save changes"}
-        </Button>
+        </PageActionButton>
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
           Cancel
         </Button>
