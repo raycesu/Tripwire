@@ -78,38 +78,57 @@ export const AssetDetailActionsMenu = ({
     }
   }
 
-  const actionLabel = isOnWatchlist ? "Remove from watchlist" : "Add to watchlist"
-  const ariaLabel = isOnWatchlist
-    ? `Remove ${symbol} from watchlist`
-    : `Add ${symbol} to watchlist`
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return
+    }
+
+    event.preventDefault()
+    void handleToggle()
+  }
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          type="button"
-          className={cn(
-            "inline-flex size-7 items-center justify-center rounded-full transition-all",
-            "nav-link-active"
-          )}
-          aria-label={`${symbol} actions`}
-          aria-expanded={open}
-        >
-          <MoreHorizontal className="size-4" aria-hidden="true" />
-        </PopoverTrigger>
-        <PopoverContent align="end" className="popover-chromeless">
-          <Button
+      {isOnWatchlist ? (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger
             type="button"
-            variant={isOnWatchlist ? "outline" : "default"}
-            disabled={isLoading}
-            aria-label={ariaLabel}
-            className="h-8 rounded-full px-4"
-            onClick={() => void handleToggle()}
+            className={cn(
+              "inline-flex size-7 items-center justify-center rounded-full transition-all",
+              "nav-link-active"
+            )}
+            aria-label={`${symbol} watchlist actions`}
+            aria-expanded={open}
           >
-            {isLoading ? "Updating…" : actionLabel}
-          </Button>
-        </PopoverContent>
-      </Popover>
+            <MoreHorizontal className="size-4" aria-hidden="true" />
+          </PopoverTrigger>
+          <PopoverContent align="end" className="popover-chromeless">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isLoading}
+              aria-label={`Remove ${symbol} from watchlist`}
+              className="h-8 rounded-full px-4"
+              onClick={() => void handleToggle()}
+              onKeyDown={handleKeyDown}
+            >
+              {isLoading ? "Updating…" : "Remove from watchlist"}
+            </Button>
+          </PopoverContent>
+        </Popover>
+      ) : (
+        <Button
+          type="button"
+          variant="default"
+          disabled={isLoading}
+          aria-label={`Add ${symbol} to watchlist`}
+          className="h-8 rounded-full px-4"
+          onClick={() => void handleToggle()}
+          onKeyDown={handleKeyDown}
+        >
+          {isLoading ? "Updating…" : "Add to watchlist"}
+        </Button>
+      )}
       {errorMessage ? (
         <p className="text-xs text-destructive" role="alert">
           {errorMessage}
