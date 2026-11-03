@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm"
 import { db } from "@/db/client"
 import { assets, scoreSnapshots, watchlistItems } from "@/db/schema"
-import { toAssetDto, type AssetDto } from "@/lib/assets/types"
+import { toAssetDto, type AssetDto, type AssetType } from "@/lib/assets/types"
 import { computeIsStale } from "@/scoring/staleness"
 import type { Cadence, SectorName } from "@/scoring/types"
 
@@ -14,10 +14,22 @@ export const listActiveAssets = async (): Promise<AssetDto[]> => {
   return rows.map(toAssetDto)
 }
 
-export const getAssetBySymbol = async (symbol: string): Promise<AssetDto | null> => {
+export const getAssetsBySymbol = async (symbol: string): Promise<AssetDto[]> => {
+  const normalized = symbol.toUpperCase()
+  const rows = await db.query.assets.findMany({
+    where: eq(assets.symbol, normalized),
+  })
+
+  return rows.map(toAssetDto)
+}
+
+export const getAssetBySymbol = async (
+  symbol: string,
+  assetType: AssetType
+): Promise<AssetDto | null> => {
   const normalized = symbol.toUpperCase()
   const row = await db.query.assets.findFirst({
-    where: eq(assets.symbol, normalized),
+    where: and(eq(assets.symbol, normalized), eq(assets.assetType, assetType)),
   })
 
   if (!row) {

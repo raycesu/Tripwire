@@ -47,9 +47,20 @@ export const POST = async (request: Request) => {
     )
   }
 
-  const result = await addToWatchlist(userOrResponse.id, parsed.data.symbol)
+  const result = await addToWatchlist(
+    userOrResponse.id,
+    parsed.data.symbol,
+    parsed.data.assetType
+  )
 
   if (!result.ok) {
+    if (result.code === "AMBIGUOUS") {
+      return NextResponse.json(
+        { error: "Ticker matches more than one asset. Choose crypto or stock." },
+        { status: 400 }
+      )
+    }
+
     if (result.code === "NOT_FOUND") {
       return NextResponse.json({ error: "Asset not found in catalog" }, { status: 404 })
     }

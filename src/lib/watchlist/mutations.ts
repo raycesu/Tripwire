@@ -2,22 +2,28 @@ import { and, eq } from "drizzle-orm"
 import { db } from "@/db/client"
 import { alertRules, assets, watchlistItems } from "@/db/schema"
 import { ensureAsset } from "@/lib/assets/ensure-asset"
-import { getAssetBySymbol } from "@/lib/assets/queries"
+import type { AssetType } from "@/lib/assets/types"
 
 export type WatchlistMutationResult =
   | { ok: true; assetId: string }
-  | { ok: false; code: "NOT_FOUND" | "INACTIVE" | "DUPLICATE" | "UNSUPPORTED" }
+  | { ok: false; code: "NOT_FOUND" | "INACTIVE" | "DUPLICATE" | "UNSUPPORTED" | "AMBIGUOUS" }
 
 export const addToWatchlist = async (
   userId: string,
-  symbol: string
+  symbol: string,
+  assetType?: AssetType
 ): Promise<WatchlistMutationResult> => {
-  const ensured = await ensureAsset(symbol)
-  const asset = ensured ?? (await getAssetBySymbol(symbol))
+  const ensured = await ensureAsset(symbol, assetType)
 
-  if (!asset) {
+  if (ensured.status === "ambiguous") {
+    return { ok: false, code: "AMBIGUOUS" }
+  }
+
+  if (ensured.status === "missing") {
     return { ok: false, code: "NOT_FOUND" }
   }
+
+  const asset = ensured.asset
 
   if (!asset.isActive) {
     return { ok: false, code: "INACTIVE" }
@@ -68,9 +74,12 @@ export const removeFromWatchlist = async (
   return { ok: true }
 }
 
-export const getAssetIdBySymbol = async (symbol: string): Promise<string | null> => {
+export const getAssetIdBySymbol = async (
+  symbol: string,
+  assetType: AssetType
+): Promise<string | null> => {
   const row = await db.query.assets.findFirst({
-    where: eq(assets.symbol, symbol.toUpperCase()),
+    where: and(eq(assets.symbol, symbol.toUpperCase()), eq(assets.assetType, assetType)),
     columns: { id: true },
   })
 

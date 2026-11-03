@@ -65,7 +65,7 @@ export const assets = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("assets_symbol_unique").on(table.symbol)]
+  (table) => [uniqueIndex("assets_symbol_type_unique").on(table.symbol, table.assetType)]
 )
 
 export const watchlistItems = pgTable(

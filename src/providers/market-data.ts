@@ -1,4 +1,5 @@
 import type { AssetDto } from "@/lib/assets/types"
+import * as binanceGlobal from "@/providers/binance-global"
 import * as binanceUs from "@/providers/binance-us"
 import { buildUsdtPairSymbol } from "@/providers/crypto-resolver"
 import * as kraken from "@/providers/kraken"
@@ -58,7 +59,11 @@ export const fetchCryptoWeeklyOhlcv = async (
     return fetchFromKraken(providerSymbol, minCount)
   }
 
-  if (providerName === "binance_us" || providerName === "binance_global" || !providerName) {
+  if (providerName === "binance_global") {
+    return binanceGlobal.fetchWeeklyOhlcv(providerSymbol, minCount)
+  }
+
+  if (providerName === "binance_us" || !providerName) {
     const usResult = await fetchFromBinanceUs(buildUsdtPairSymbol(baseSymbol), minCount)
 
     if (usResult.ok) {
@@ -89,7 +94,7 @@ export const fetchCryptoWeeklyOhlcv = async (
       ...krakenResult,
       sourceMetadata: {
         ...krakenResult.sourceMetadata,
-        fallbackFrom: providerName === "binance_global" ? "binance_us" : (providerName ?? "binance_us"),
+        fallbackFrom: providerName ?? "binance_us",
         fallbackReason: usResult.message,
       },
     }

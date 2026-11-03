@@ -30,3 +30,25 @@ export const rankCatalogSearchResult = (
 
   return 3
 }
+
+const assetTypeTieBreak = (assetType: AssetType): number => (assetType === "crypto" ? 0 : 1)
+
+export const compareCatalogSearchResults = (
+  query: string,
+  left: CatalogSearchResult,
+  right: CatalogSearchResult
+): number => {
+  const rankDiff = rankCatalogSearchResult(query, left) - rankCatalogSearchResult(query, right)
+
+  if (rankDiff !== 0) {
+    return rankDiff
+  }
+
+  const symbolDiff = left.symbol.localeCompare(right.symbol)
+
+  if (symbolDiff !== 0) {
+    return symbolDiff
+  }
+
+  return assetTypeTieBreak(left.assetType) - assetTypeTieBreak(right.assetType)
+}

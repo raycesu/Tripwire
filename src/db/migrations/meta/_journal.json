@@ -57,6 +57,13 @@
       "when": 1780400000000,
       "tag": "0007_performance_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780500000000,
+      "tag": "0008_assets_symbol_type_unique",
+      "breakpoints": true
     }
   ]
 }

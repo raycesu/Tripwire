@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 type AssetDetailActionsMenuProps = {
   assetId: string
   symbol: string
+  assetType: "crypto" | "stock"
   isOnWatchlist: boolean
 }
 
@@ -31,6 +32,7 @@ const getResponseErrorMessage = async (response: Response, fallback: string) => 
 export const AssetDetailActionsMenu = ({
   assetId,
   symbol,
+  assetType,
   isOnWatchlist: initialOnWatchlist,
 }: AssetDetailActionsMenuProps) => {
   const router = useRouter()
@@ -59,7 +61,7 @@ export const AssetDetailActionsMenu = ({
         const response = await fetch("/api/watchlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symbol }),
+          body: JSON.stringify({ symbol, assetType }),
         })
 
         if (!response.ok) {

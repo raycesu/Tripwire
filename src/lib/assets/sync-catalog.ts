@@ -7,7 +7,8 @@ import {
   mergeCryptoCatalogEntries,
   type CryptoCatalogEntry,
 } from "@/lib/assets/build-crypto-catalog"
-import { logInfo } from "@/lib/logging/logger"
+import { logInfo, logWarn } from "@/lib/logging/logger"
+import * as binanceGlobal from "@/providers/binance-global"
 import * as binanceUs from "@/providers/binance-us"
 import * as kraken from "@/providers/kraken"
 import { listStockCatalogEntries, type StockCatalogEntry } from "@/providers/twelve-data-symbols"
@@ -124,15 +125,33 @@ export const pruneOrphanedStockAssets = async (
   return deleted.length
 }
 
+const listBinanceGlobalBases = async () => {
+  try {
+    return await binanceGlobal.listTradableUsdtBases()
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Binance Global catalog request failed"
+
+    logWarn({
+      event: "binance_global_catalog_unavailable",
+      message,
+    })
+
+    return []
+  }
+}
+
 export const buildCryptoCatalog = async (): Promise<CryptoCatalogEntry[]> => {
-  const [usBases, krakenBases] = await Promise.all([
+  const [usBases, krakenBases, globalBases] = await Promise.all([
     binanceUs.listTradableUsdtBases(),
     kraken.listTradableUsdtBases(),
+    listBinanceGlobalBases(),
   ])
 
   return mergeCryptoCatalogEntries(
     mapBinanceBasesToCatalog(usBases),
-    mapKrakenBasesToCatalog(krakenBases)
+    mapKrakenBasesToCatalog(krakenBases),
+    mapBinanceBasesToCatalog(globalBases)
   )
 }
 

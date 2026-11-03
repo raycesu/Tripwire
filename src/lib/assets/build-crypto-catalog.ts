@@ -1,33 +1,29 @@
+export type CryptoCatalogSource = "binance_us" | "kraken" | "binance_global"
+
 export type CryptoCatalogEntry = {
   symbol: string
   name: string
   assetType: "crypto"
-  source: "binance_us" | "kraken"
+  source: CryptoCatalogSource
   providerSymbol: string
 }
 
 export const mergeCryptoCatalogEntries = (
-  primaryEntries: CryptoCatalogEntry[],
-  fallbackEntries: CryptoCatalogEntry[]
+  ...groups: CryptoCatalogEntry[][]
 ): CryptoCatalogEntry[] => {
   const bySymbol = new Map<string, CryptoCatalogEntry>()
 
-  for (const entry of primaryEntries) {
-    bySymbol.set(entry.symbol, {
-      ...entry,
-      assetType: "crypto",
-    })
-  }
+  for (const group of groups) {
+    for (const entry of group) {
+      if (bySymbol.has(entry.symbol)) {
+        continue
+      }
 
-  for (const entry of fallbackEntries) {
-    if (bySymbol.has(entry.symbol)) {
-      continue
+      bySymbol.set(entry.symbol, {
+        ...entry,
+        assetType: "crypto",
+      })
     }
-
-    bySymbol.set(entry.symbol, {
-      ...entry,
-      assetType: "crypto",
-    })
   }
 
   return Array.from(bySymbol.values()).sort((left, right) =>
@@ -40,7 +36,7 @@ export const mapBinanceBasesToCatalog = (
     symbol: string
     name: string
     providerSymbol: string
-    source: "binance_us"
+    source: "binance_us" | "binance_global"
   }>
 ): CryptoCatalogEntry[] =>
   entries.map((entry) => ({

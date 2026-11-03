@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 type WatchlistToggleButtonProps = {
   assetId: string
   symbol: string
+  assetType: "crypto" | "stock"
   isOnWatchlist: boolean
 }
 
@@ -28,6 +29,7 @@ const getResponseErrorMessage = async (response: Response, fallback: string) => 
 export const WatchlistToggleButton = ({
   assetId,
   symbol,
+  assetType,
   isOnWatchlist: initialOnWatchlist,
 }: WatchlistToggleButtonProps) => {
   const router = useRouter()
@@ -54,7 +56,7 @@ export const WatchlistToggleButton = ({
         const response = await fetch("/api/watchlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symbol }),
+          body: JSON.stringify({ symbol, assetType }),
         })
 
         if (!response.ok) {

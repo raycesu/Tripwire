@@ -3,10 +3,12 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AssetDetailActionsMenu } from "@/components/assets/asset-detail-actions-menu"
 import { AssetDetailHeader } from "@/components/assets/asset-detail-header"
+import { AssetSymbolChooser } from "@/components/assets/asset-symbol-chooser"
 import { TradingViewChartSection } from "@/components/assets/trading-view-chart-section"
 import { ScoreHistorySection } from "@/components/scores/score-history-section"
 import { cn } from "@/lib/utils"
 import { ensureAsset } from "@/lib/assets/ensure-asset"
+import type { AssetType } from "@/lib/assets/types"
 import { isAssetOnWatchlist } from "@/lib/assets/queries"
 import { ensureDbUser } from "@/lib/auth/ensure-user"
 import { resolveTradingViewSymbolForAsset } from "@/lib/market-data/resolve-tradingview-symbol"
@@ -14,16 +16,32 @@ import { getLatestSnapshotsForAsset, getScoreHistory } from "@/lib/scores/querie
 
 type AssetDetailPageProps = {
   params: Promise<{ symbol: string }>
+  searchParams: Promise<{ type?: string }>
 }
 
-export default async function AssetDetailPage({ params }: AssetDetailPageProps) {
-  const { symbol } = await params
-  const user = await ensureDbUser()
-  const asset = await ensureAsset(symbol)
+const parseAssetType = (value: string | undefined): AssetType | undefined => {
+  if (value === "crypto" || value === "stock") {
+    return value
+  }
 
-  if (!asset) {
+  return undefined
+}
+
+export default async function AssetDetailPage({ params, searchParams }: AssetDetailPageProps) {
+  const { symbol } = await params
+  const { type } = await searchParams
+  const user = await ensureDbUser()
+  const ensured = await ensureAsset(symbol, parseAssetType(type))
+
+  if (ensured.status === "missing") {
     notFound()
   }
+
+  if (ensured.status === "ambiguous") {
+    return <AssetSymbolChooser symbol={symbol.toUpperCase()} choices={ensured.choices} />
+  }
+
+  const asset = ensured.asset
 
   const [onWatchlist, snapshotSummary, compositeHistory, macroHistory, relativityHistory, volumeHistory] =
     await Promise.all([
@@ -59,6 +77,7 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
           <AssetDetailActionsMenu
             assetId={asset.id}
             symbol={asset.symbol}
+            assetType={asset.assetType}
             isOnWatchlist={onWatchlist}
           />
         }

@@ -4,6 +4,7 @@ import { Search } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { assetDetailHref } from "@/lib/assets/asset-href"
 import { cn } from "@/lib/utils"
 import type { AssetType } from "@/lib/assets/types"
 
@@ -49,13 +50,13 @@ export const AssetSearchCombobox = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const handleSelect = useCallback(
-    (symbol: string) => {
+    (symbol: string, assetType: AssetType) => {
       setIsOpen(false)
       setQuery("")
       setResults([])
       setActiveIndex(-1)
       onAssetSelected?.()
-      router.push(`/assets/${symbol}`)
+      router.push(assetDetailHref(symbol, assetType))
     },
     [onAssetSelected, router]
   )
@@ -176,7 +177,7 @@ export const AssetSearchCombobox = ({
       const selected = results[activeIndex]
 
       if (selected) {
-        handleSelect(selected.symbol)
+        handleSelect(selected.symbol, selected.assetType)
       }
     }
   }
@@ -198,20 +199,21 @@ export const AssetSearchCombobox = ({
     handleFilterClick(value)
   }
 
-  const handleResultClick = (symbol: string) => {
-    handleSelect(symbol)
+  const handleResultClick = (symbol: string, assetType: AssetType) => {
+    handleSelect(symbol, assetType)
   }
 
   const handleResultKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
-    symbol: string
+    symbol: string,
+    assetType: AssetType
   ) => {
     if (event.key !== "Enter" && event.key !== " ") {
       return
     }
 
     event.preventDefault()
-    handleSelect(symbol)
+    handleSelect(symbol, assetType)
   }
 
   const trimmedQuery = query.trim()
@@ -357,8 +359,10 @@ export const AssetSearchCombobox = ({
                         activeIndex === index && "bg-white/8",
                         layout !== "panel" && "px-4 py-3 hover:bg-white/8"
                       )}
-                      onClick={() => handleResultClick(result.symbol)}
-                      onKeyDown={(event) => handleResultKeyDown(event, result.symbol)}
+                      onClick={() => handleResultClick(result.symbol, result.assetType)}
+                      onKeyDown={(event) =>
+                        handleResultKeyDown(event, result.symbol, result.assetType)
+                      }
                       onMouseEnter={() => setActiveIndex(-1)}
                     >
                       {layout === "panel" ? (
@@ -378,11 +382,9 @@ export const AssetSearchCombobox = ({
                         {result.assetType === "stock" && result.exchange ? (
                           <Badge variant="default">{result.exchange}</Badge>
                         ) : null}
-                        {layout !== "panel" ? (
-                          <Badge variant="default" className="capitalize">
-                            {result.assetType}
-                          </Badge>
-                        ) : null}
+                        <Badge variant="default" className="capitalize">
+                          {result.assetType}
+                        </Badge>
                       </span>
                     </button>
                   </li>

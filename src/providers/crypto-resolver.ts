@@ -1,8 +1,9 @@
+import * as binanceGlobal from "@/providers/binance-global"
 import * as binanceUs from "@/providers/binance-us"
 import * as kraken from "@/providers/kraken"
 import type { CryptoResolutionResult } from "@/providers/types"
 
-const UNSUPPORTED_REASON = "No Binance US or Kraken USDT pair found"
+const UNSUPPORTED_REASON = "No Binance US, Kraken, or Binance spot USDT pair found"
 
 export const buildUsdtPairSymbol = (baseSymbol: string): string =>
   `${baseSymbol.toUpperCase()}USDT`
@@ -27,6 +28,15 @@ export const resolveCryptoSymbol = async (baseSymbol: string): Promise<CryptoRes
       ok: true,
       providerName: "kraken",
       providerSymbol: krakenPair.providerSymbol,
+      quoteAsset: "USDT",
+    }
+  }
+
+  if (await binanceGlobal.hasActiveUsdtPair(providerSymbol)) {
+    return {
+      ok: true,
+      providerName: "binance_global",
+      providerSymbol,
       quoteAsset: "USDT",
     }
   }

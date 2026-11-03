@@ -52,7 +52,7 @@ export type WeeklyOhlcvResult = WeeklyOhlcvSuccess | WeeklyOhlcvFailure
 
 export type CryptoResolutionSuccess = {
   ok: true
-  providerName: "binance_us" | "kraken"
+  providerName: "binance_us" | "kraken" | "binance_global"
   providerSymbol: string
   quoteAsset: "USDT"
 }

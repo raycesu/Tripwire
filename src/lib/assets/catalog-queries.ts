@@ -2,15 +2,30 @@ import { and, asc, eq, ilike, or } from "drizzle-orm"
 import { db } from "@/db/client"
 import { assetCatalog } from "@/db/schema"
 import {
-  rankCatalogSearchResult,
+  compareCatalogSearchResults,
   type CatalogSearchResult,
 } from "@/lib/assets/search-ranking"
 import type { AssetType } from "@/lib/assets/types"
 
 export type { CatalogSearchResult } from "@/lib/assets/search-ranking"
-export { rankCatalogSearchResult } from "@/lib/assets/search-ranking"
+export { compareCatalogSearchResults, rankCatalogSearchResult } from "@/lib/assets/search-ranking"
 
-const rankSearchResult = rankCatalogSearchResult
+export const listCatalogEntriesBySymbol = async (
+  symbol: string
+): Promise<CatalogSearchResult[]> => {
+  const normalized = symbol.toUpperCase()
+  const rows = await db.query.assetCatalog.findMany({
+    where: eq(assetCatalog.symbol, normalized),
+  })
+
+  return rows.map((row) => ({
+    symbol: row.symbol,
+    name: row.name,
+    assetType: row.assetType as AssetType,
+    source: row.source,
+    exchange: row.exchange,
+  }))
+}
 
 export const getCatalogEntryBySymbol = async (
   symbol: string,
@@ -89,15 +104,6 @@ export const searchAssetCatalog = async (input: {
   }
 
   return Array.from(unique.values())
-    .sort((left, right) => {
-      const rankDiff =
-        rankSearchResult(normalizedQuery, left) - rankSearchResult(normalizedQuery, right)
-
-      if (rankDiff !== 0) {
-        return rankDiff
-      }
-
-      return left.symbol.localeCompare(right.symbol)
-    })
+    .sort((left, right) => compareCatalogSearchResults(normalizedQuery, left, right))
     .slice(0, input.limit)
 }

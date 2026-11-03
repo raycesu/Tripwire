@@ -53,6 +53,57 @@ describe("mergeCryptoCatalogEntries", () => {
     expect(merged.map((entry) => entry.symbol)).toEqual(["ETH", "KRAKONLY"])
     expect(merged.find((entry) => entry.symbol === "KRAKONLY")?.source).toBe("kraken")
   })
+
+  it("prefers earlier venues and keeps Binance-only bases", () => {
+    const merged = mergeCryptoCatalogEntries(
+      mapBinanceBasesToCatalog([
+        {
+          symbol: "BTC",
+          name: "BTC",
+          providerSymbol: "BTCUSDT",
+          source: "binance_us",
+        },
+      ]),
+      mapKrakenBasesToCatalog([
+        {
+          symbol: "BTC",
+          name: "BTC",
+          providerSymbol: "XBTUSDT",
+          source: "kraken",
+        },
+        {
+          symbol: "ZEC",
+          name: "ZEC",
+          providerSymbol: "ZECUSDT",
+          source: "kraken",
+        },
+      ]),
+      mapBinanceBasesToCatalog([
+        {
+          symbol: "ZEC",
+          name: "ZEC",
+          providerSymbol: "ZECUSDT",
+          source: "binance_global",
+        },
+        {
+          symbol: "PUMP",
+          name: "PUMP",
+          providerSymbol: "PUMPUSDT",
+          source: "binance_global",
+        },
+      ])
+    )
+
+    expect(merged.find((entry) => entry.symbol === "BTC")?.source).toBe("binance_us")
+    expect(merged.find((entry) => entry.symbol === "ZEC")?.source).toBe("kraken")
+    expect(merged.find((entry) => entry.symbol === "PUMP")).toEqual({
+      symbol: "PUMP",
+      name: "PUMP",
+      assetType: "crypto",
+      source: "binance_global",
+      providerSymbol: "PUMPUSDT",
+    })
+  })
 })
 
 describe("mapBinanceBasesToCatalog", () => {

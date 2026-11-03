@@ -519,7 +519,7 @@ Inputs:
 - 30 weekly OHLCV candles.
 - Exclude in-progress weekly candles for stable production scores.
 - Index convention: `0` is oldest candle and `29` is the most recent completed weekly candle.
-- Crypto source: Binance US or Kraken weekly klines.
+- Crypto source: Binance US, Kraken, or Binance spot weekly klines.
 - Equity source: Twelve Data weekly candles for US exchange listings.
 
 Components:
@@ -925,8 +925,11 @@ Implementation note:
 Crypto OHLCV and catalog:
 
 - Primary: Binance US public REST API for weekly candles and active `USDT` spot catalog entries.
-- Fallback: Kraken public REST API for weekly candles when Binance US does not list the needed `USDT` pair.
-- Both providers should use public market-data endpoints only; no API key should be required for crypto OHLCV.
+- First fallback: Kraken public REST API for weekly candles when Binance US does not list the needed `USDT` pair.
+- Second fallback: Binance (`api.binance.com`) public REST API for active spot `USDT` pairs that neither Binance US nor Kraken lists, such as `PUMPUSDT`.
+- Catalog merge keeps the first venue that lists a base symbol: Binance US, then Kraken, then Binance.
+- All three providers should use public market-data endpoints only; no API key should be required for crypto OHLCV.
+- The same ticker may exist as both a stock and a crypto. `assets` is unique on `symbol + asset_type`, and asset links include `?type=crypto` or `?type=stock`.
 
 Crypto symbol resolution:
 
@@ -944,7 +947,13 @@ Crypto symbol resolution:
    - `provider_symbol = "<KRAKEN_PAIR>"`
    - `quote_asset = "USDT"`
    - `resolution_status = "resolved"`
-7. If neither provider supports the pair, mark the asset unsupported with a clear reason.
+7. If not found, query Binance exchange info for an active spot `USDT` pair.
+8. If found on Binance, store:
+   - `provider_name = "binance_global"`
+   - `provider_symbol = "<BASE>USDT"`
+   - `quote_asset = "USDT"`
+   - `resolution_status = "resolved"`
+9. If none of the three venues support the pair, mark the asset unsupported with a clear reason.
 
 Resolution pseudocode:
 
@@ -958,11 +967,14 @@ krakenPair = kraken.resolveUsdtPair(baseSymbol)
 if krakenPair:
   return { provider: "kraken", symbol: krakenPair.providerSymbol }
 
+if binance.exchangeInfo.hasActiveSymbol(candidate):
+  return { provider: "binance_global", symbol: candidate }
+
 return {
   provider: null,
   symbol: null,
   status: "unsupported",
-  reason: "No Binance US or Kraken USDT pair found"
+  reason: "No Binance US, Kraken, or Binance spot USDT pair found"
 }
 ```
 
@@ -970,7 +982,7 @@ Crypto OHLCV fetch:
 
 - If `provider_name = "binance_us"`, fetch klines from Binance US; on failure, try Kraken for the same base symbol.
 - If `provider_name = "kraken"`, fetch klines from Kraken.
-- Legacy rows with `provider_name = "binance_global"` should still fetch through the Binance US → Kraken fallback path during migration.
+- If `provider_name = "binance_global"`, fetch klines from Binance (`api.binance.com`) for the stored `USDT` pair. Do not reroute that provider through Binance US.
 - Use `interval=1w` and the required `limit` for the sector.
 - Normalize provider responses into the same internal candle shape.
 - Store the selected provider and symbol in `source_metadata_json` on every score snapshot.
@@ -999,9 +1011,9 @@ Provider open questions:
 
 Provider and data edge cases:
 
-- If a crypto asset does not have a Binance US or Kraken `USDT` pair, mark it unsupported instead of guessing another pair.
+- If a crypto asset does not have a Binance US, Kraken, or Binance spot `USDT` pair, mark it unsupported instead of guessing another pair.
 - Do not silently fall back to `USDC`, `USD`, `BTC`, or perpetual futures pairs in the MVP.
-- Prefer Binance US over Kraken when both providers support the same base symbol.
+- Prefer Binance US, then Kraken, then Binance when more than one venue lists the same base symbol.
 - Cache exchange-info responses so symbol resolution does not call provider metadata endpoints repeatedly.
 - Throttle and deduplicate Twelve Data catalog and OHLCV requests to stay within free-tier limits.
 - If a stock provider cannot return enough weekly candles, return null for the affected sector with `null_reason = "insufficient_candles"`.

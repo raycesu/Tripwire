@@ -6,6 +6,7 @@ export const addWatchlistBodySchema = z.object({
     .min(1)
     .max(32)
     .transform((value) => value.trim().toUpperCase()),
+  assetType: z.enum(["crypto", "stock"]).optional(),
 })
 
 export const assetIdParamSchema = z.object({

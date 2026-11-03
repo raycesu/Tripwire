@@ -15,10 +15,10 @@ export const resolveCryptoAssetBySymbol = async (
   symbol: string
 ): Promise<ResolveAssetResult | null> => {
   const row = await db.query.assets.findFirst({
-    where: eq(assets.symbol, symbol.toUpperCase()),
+    where: and(eq(assets.symbol, symbol.toUpperCase()), eq(assets.assetType, "crypto")),
   })
 
-  if (!row || row.assetType !== "crypto") {
+  if (!row) {
     return null
   }
 
@@ -70,10 +70,10 @@ export const resolveStockAssetBySymbol = async (
   symbol: string
 ): Promise<ResolveAssetResult | null> => {
   const row = await db.query.assets.findFirst({
-    where: eq(assets.symbol, symbol.toUpperCase()),
+    where: and(eq(assets.symbol, symbol.toUpperCase()), eq(assets.assetType, "stock")),
   })
 
-  if (!row || row.assetType !== "stock") {
+  if (!row) {
     return null
   }
 

@@ -7,6 +7,7 @@ import {
 import { SectorScoreTube } from "@/components/scores/sector-score-tube"
 import { ScoreSignalBadge } from "@/components/scores/score-signal-badge"
 import { ScoreSpeedometer } from "@/components/scores/score-speedometer"
+import { assetDetailHref } from "@/lib/assets/asset-href"
 import type { AssetSnapshotsSummary } from "@/lib/scores/types"
 import type { WatchlistEntryDto } from "@/lib/watchlist/types"
 
@@ -26,7 +27,7 @@ export const WatchlistTableRow = ({ entry, summary }: WatchlistTableRowProps) =>
     >
       <div role="cell" className={watchlistBodyCellClass("asset")}>
         <Link
-          href={`/assets/${entry.asset.symbol}`}
+          href={assetDetailHref(entry.asset.symbol, entry.asset.assetType)}
           className="group block min-w-0"
         >
           <span className="block truncate font-semibold text-metallic group-hover:underline">
