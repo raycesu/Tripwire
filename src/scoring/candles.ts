@@ -2,6 +2,27 @@ import type { DailyPricePoint, NullReason, WeeklyOhlcvCandle } from "@/providers
 
 export const VOLUME_CANDLE_COUNT = 30
 export const RSI_MIN_CANDLE_COUNT = 28
+export const EARLY_HISTORY_MIN_CANDLES = 15
+
+export const isLowHistory = (candleCount: number, requiredCount: number): boolean =>
+  candleCount < requiredCount
+
+export const buildLowHistoryComponents = (
+  candleCount: number,
+  requiredCount: number
+): Record<string, unknown> => {
+  if (!isLowHistory(candleCount, requiredCount)) {
+    return {
+      candle_count: candleCount,
+    }
+  }
+
+  return {
+    low_history: true,
+    candle_count: candleCount,
+    required_candle_count: requiredCount,
+  }
+}
 
 export type NormalizeWeeklyOptions = {
   excludeInProgress?: boolean

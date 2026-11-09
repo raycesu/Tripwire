@@ -18,6 +18,8 @@ const buildView = (
   nullReason: null,
   isStale: false,
   componentsJson: null,
+  lowHistory: false,
+  candleCount: null,
   computedAt,
   validForDate,
   cadence: sector === "macro" || sector === "composite" ? "daily" : "weekly",

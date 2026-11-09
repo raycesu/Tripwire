@@ -39,6 +39,7 @@ const toSnapshotInput = (record: ScoreSnapshotRecord): SectorSnapshotInput => ({
   isStale: record.isStale,
   computedAt: record.computedAt,
   cadence: record.cadence,
+  componentsJson: record.componentsJson,
 })
 
 const mapRow = (row: typeof scoreSnapshots.$inferSelect): ScoreSnapshotRecord => ({

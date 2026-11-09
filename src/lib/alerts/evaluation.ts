@@ -2,6 +2,7 @@ import type { AlertRule } from "@/db/schema"
 import type { ScoreSnapshotRecord } from "@/lib/scores/snapshots"
 import { parseAlertOperator } from "@/lib/alerts/types"
 import { formatScore } from "@/lib/scores/labels"
+import { getLowHistoryMeta } from "@/lib/scores/low-history"
 import { logWarn } from "@/lib/logging/logger"
 import type { SectorName } from "@/scoring/types"
 
@@ -50,9 +51,13 @@ export const isRuleWithinCooldown = (
 
 export const doesRuleMatchSnapshot = (
   rule: Pick<AlertRule, "operator" | "threshold">,
-  snapshot: Pick<ScoreSnapshotRecord, "score" | "isNull" | "isStale">
+  snapshot: Pick<ScoreSnapshotRecord, "score" | "isNull" | "isStale" | "componentsJson">
 ): boolean => {
   if (snapshot.isNull || snapshot.isStale) {
+    return false
+  }
+
+  if (getLowHistoryMeta(snapshot.componentsJson).lowHistory) {
     return false
   }
 

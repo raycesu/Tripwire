@@ -94,6 +94,8 @@ export const ExpandableSectorSnapshotRow = ({
               nullReason={snapshot.nullReason}
               isStale={snapshot.isStale}
               cadence={snapshot.cadence}
+              lowHistory={snapshot.lowHistory}
+              candleCount={snapshot.candleCount}
             />
           ) : (
             <FreshnessBadges isNull isStale={false} cadence="daily" nullReason="No score yet" />

@@ -1,5 +1,9 @@
 import type { WeeklyOhlcvCandle } from "@/providers/types"
-import { VOLUME_CANDLE_COUNT } from "@/scoring/candles"
+import {
+  EARLY_HISTORY_MIN_CANDLES,
+  VOLUME_CANDLE_COUNT,
+  buildLowHistoryComponents,
+} from "@/scoring/candles"
 import { clamp, latestRsi } from "@/scoring/indicators"
 import { formatScoreNumber } from "@/scoring/thresholds"
 import type { SectorScoreResult } from "@/scoring/types"
@@ -41,8 +45,14 @@ export const computeRsiGate = (rsi: number | null): number => {
 
 export const computeVTrend = (candles: WeeklyOhlcvCandle[]): number => {
   const volumes = candles.map((candle) => candle.volume)
-  const volRecent = mean(volumes.slice(27, 30))
-  const volPrior = mean(volumes.slice(24, 27))
+  const count = volumes.length
+
+  if (count < 6) {
+    return 0
+  }
+
+  const volRecent = mean(volumes.slice(count - 3, count))
+  const volPrior = mean(volumes.slice(count - 6, count - 3))
 
   if (volPrior === 0) {
     return 0
@@ -54,45 +64,62 @@ export const computeVTrend = (candles: WeeklyOhlcvCandle[]): number => {
 
 export const computePContext = (candles: WeeklyOhlcvCandle[]): number => {
   const closes = candles.map((candle) => candle.close)
-  const window = closes.slice(20, 30)
-  const low10w = Math.min(...window)
-  const high10w = Math.max(...window)
-  const range = high10w - low10w
+  const count = closes.length
+
+  if (count === 0) {
+    return 0
+  }
+
+  const windowSize = Math.min(10, count)
+  const window = closes.slice(count - windowSize, count)
+  const lowWindow = Math.min(...window)
+  const highWindow = Math.max(...window)
+  const range = highWindow - lowWindow
 
   if (range === 0) {
     return 0
   }
 
-  const rangePosition = (closes[29] - low10w) / range
+  const rangePosition = (closes[count - 1] - lowWindow) / range
   return clamp(1 - rangePosition * 2, -1, 1)
 }
 
 export const computeDecelFactor = (candles: WeeklyOhlcvCandle[]): number => {
   const closes = candles.map((candle) => candle.close)
+  const count = closes.length
 
-  if (closes[27] === 0 || closes[25] === 0) {
+  if (count < 5) {
     return 1
   }
 
-  const momentumRecent = (closes[29] - closes[27]) / closes[27]
-  const momentumPrior = (closes[27] - closes[25]) / closes[25]
+  const latest = closes[count - 1]
+  const mid = closes[count - 3]
+  const prior = closes[count - 5]
+
+  if (mid === 0 || prior === 0) {
+    return 1
+  }
+
+  const momentumRecent = (latest - mid) / mid
+  const momentumPrior = (mid - prior) / prior
 
   return clamp(1 + (momentumPrior - momentumRecent), 0.5, 1.5)
 }
 
 export const computeVolumeFromCandles = (candles: WeeklyOhlcvCandle[]): SectorScoreResult => {
-  if (candles.length < VOLUME_CANDLE_COUNT) {
+  if (candles.length < EARLY_HISTORY_MIN_CANDLES) {
     return {
       score: null,
       isNull: true,
       nullReason: "insufficient_candles",
       components: {
-        error: `Need ${VOLUME_CANDLE_COUNT} completed weekly candles, got ${candles.length}`,
+        error: `Need at least ${EARLY_HISTORY_MIN_CANDLES} completed weekly candles, got ${candles.length}`,
       },
     }
   }
 
-  const normalized = candles.slice(-VOLUME_CANDLE_COUNT)
+  const useCount = Math.min(candles.length, VOLUME_CANDLE_COUNT)
+  const normalized = candles.slice(-useCount)
   const closes = normalized.map((candle) => candle.close)
   const rsiNow = latestRsi(closes, 14)
   const vTrend = computeVTrend(normalized)
@@ -117,6 +144,7 @@ export const computeVolumeFromCandles = (candles: WeeklyOhlcvCandle[]): SectorSc
       raw,
       score,
       formatted_score: formatScoreNumber(score),
+      ...buildLowHistoryComponents(normalized.length, VOLUME_CANDLE_COUNT),
     },
   }
 }

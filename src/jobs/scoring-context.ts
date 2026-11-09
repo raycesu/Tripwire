@@ -2,9 +2,9 @@ import type { AssetDto } from "@/lib/assets/types"
 import { fetchBenchmarkWeeklyOhlcv, fetchWeeklyOhlcvFromDto } from "@/providers/market-data"
 import type { WeeklyOhlcvResult } from "@/providers/types"
 import {
+  EARLY_HISTORY_MIN_CANDLES,
   normalizeWeeklyOhlcvCandles,
   RSI_MIN_CANDLE_COUNT,
-  VOLUME_CANDLE_COUNT,
 } from "@/scoring/candles"
 import { latestRsi } from "@/scoring/indicators"
 import { computeCryptoMacro, computeStockMacro } from "@/scoring/macro"
@@ -80,7 +80,7 @@ export class ScoringContext {
       return cached
     }
 
-    const fetchPromise = fetchWeeklyOhlcvFromDto(asset, VOLUME_CANDLE_COUNT)
+    const fetchPromise = fetchWeeklyOhlcvFromDto(asset, EARLY_HISTORY_MIN_CANDLES)
     this.assetWeeklyOhlcvCache.set(asset.id, fetchPromise)
     return fetchPromise
   }

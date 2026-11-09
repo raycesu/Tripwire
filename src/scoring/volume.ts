@@ -2,8 +2,8 @@ import type { AssetDto } from "@/lib/assets/types"
 import { fetchWeeklyOhlcvFromDto } from "@/providers/market-data"
 import type { SourceMetadata, WeeklyOhlcvResult } from "@/providers/types"
 import {
+  EARLY_HISTORY_MIN_CANDLES,
   normalizeWeeklyOhlcvCandles,
-  VOLUME_CANDLE_COUNT,
 } from "@/scoring/candles"
 import type { SectorScoreResult } from "@/scoring/types"
 import { computeVolumeFromCandles } from "@/scoring/volume-formula"
@@ -29,7 +29,7 @@ export const computeVolume = async (
     }
   }
 
-  const ohlcv = weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, VOLUME_CANDLE_COUNT))
+  const ohlcv = weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, EARLY_HISTORY_MIN_CANDLES))
 
   if (!ohlcv.ok) {
     return {
@@ -42,7 +42,7 @@ export const computeVolume = async (
 
   const normalized = normalizeWeeklyOhlcvCandles(ohlcv.candles, {
     excludeInProgress: true,
-    minCount: VOLUME_CANDLE_COUNT,
+    minCount: EARLY_HISTORY_MIN_CANDLES,
   })
 
   if (!normalized.ok) {

@@ -8,6 +8,8 @@ export type ScoreSnapshotView = {
   nullReason: string | null
   isStale: boolean
   componentsJson: Record<string, unknown> | null
+  lowHistory: boolean
+  candleCount: number | null
   computedAt: Date
   validForDate: Date
   cadence: Cadence | string

@@ -19,6 +19,7 @@ const toSectorInput = (snapshot: ScoreSnapshotView): SectorSnapshotInput => ({
   isStale: snapshot.isStale,
   computedAt: snapshot.computedAt,
   cadence: snapshot.cadence as Cadence,
+  componentsJson: snapshot.componentsJson,
 })
 
 const toRecordInput = (snapshot: ScoreSnapshotRecord): SectorSnapshotInput => ({
@@ -29,6 +30,7 @@ const toRecordInput = (snapshot: ScoreSnapshotRecord): SectorSnapshotInput => ({
   isStale: snapshot.isStale,
   computedAt: snapshot.computedAt,
   cadence: snapshot.cadence,
+  componentsJson: snapshot.componentsJson,
 })
 
 export const resolveCompositeForDisplay = (
@@ -52,6 +54,7 @@ export const resolveCompositeForDisplay = (
       isNull: true,
       nullReason: result.nullReason ?? "insufficient_valid_sectors",
       isStale: false,
+      componentsJson: result.components,
     }
   }
 
@@ -68,6 +71,7 @@ export const resolveCompositeForDisplay = (
     isNull: false,
     nullReason: null,
     isStale,
+    componentsJson: result.components,
   }
 }
 
@@ -94,6 +98,7 @@ export const resolveCompositeRecord = (
       isNull: true,
       nullReason: result.nullReason ?? "insufficient_valid_sectors",
       isStale: false,
+      componentsJson: result.components,
     }
   }
 
@@ -109,5 +114,6 @@ export const resolveCompositeRecord = (
     isNull: false,
     nullReason: null,
     isStale,
+    componentsJson: result.components,
   }
 }

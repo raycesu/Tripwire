@@ -17,7 +17,7 @@ const run = async () => {
   await resolvePendingAssets()
 
   const assets = await listActiveAssets()
-  const cryptoTargets = ["BTC", "ETH", "SOL", "ZEC", "HYPE"]
+  const cryptoTargets = ["BTC", "ETH", "SOL", "ZEC", "HYPE", "XMR"]
 
   for (const symbol of cryptoTargets) {
     const asset = assets.find((entry) => entry.symbol === symbol)

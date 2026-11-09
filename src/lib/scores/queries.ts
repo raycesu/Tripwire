@@ -3,6 +3,7 @@ import { db } from "@/db/client"
 import { scoreSnapshots } from "@/db/schema"
 import { resolveCompositeForDisplay } from "@/lib/scores/resolve-composite"
 import { mapRowToScoreHistoryPoint } from "@/lib/scores/history"
+import { getLowHistoryMeta } from "@/lib/scores/low-history"
 import type { AssetSnapshotsSummary, ScoreHistoryPoint, ScoreSnapshotView } from "@/lib/scores/types"
 import { computeIsStale } from "@/scoring/staleness"
 import type { Cadence, SectorName } from "@/scoring/types"
@@ -11,12 +12,24 @@ export { mapRowToScoreHistoryPoint } from "@/lib/scores/history"
 
 const DEFAULT_HISTORY_LIMIT = 90
 
+const withLowHistoryMeta = (
+  view: Omit<ScoreSnapshotView, "lowHistory" | "candleCount">
+): ScoreSnapshotView => {
+  const meta = getLowHistoryMeta(view.componentsJson)
+
+  return {
+    ...view,
+    lowHistory: meta.lowHistory,
+    candleCount: meta.candleCount,
+  }
+}
+
 const mapRowToView = (row: typeof scoreSnapshots.$inferSelect): ScoreSnapshotView => {
   const sector = row.sector as SectorName | "composite"
   const cadence = row.cadence as Cadence
   const isStale = computeIsStale(sector as SectorName, cadence, row.computedAt)
 
-  return {
+  return withLowHistoryMeta({
     id: row.id,
     sector,
     score: row.score,
@@ -27,7 +40,7 @@ const mapRowToView = (row: typeof scoreSnapshots.$inferSelect): ScoreSnapshotVie
     computedAt: row.computedAt,
     validForDate: row.validForDate,
     cadence,
-  }
+  })
 }
 
 export const getScoreHistory = async (
@@ -77,7 +90,12 @@ const buildSummaryFromSnapshots = (
   const relativity = bySector.get("relativity") ?? null
   const volume = bySector.get("volume") ?? null
   const storedComposite = bySector.get("composite") ?? null
-  const composite = resolveCompositeForDisplay(storedComposite, { macro, relativity, volume })
+  const resolvedComposite = resolveCompositeForDisplay(storedComposite, {
+    macro,
+    relativity,
+    volume,
+  })
+  const composite = resolvedComposite ? withLowHistoryMeta(resolvedComposite) : null
 
   const all = [composite, macro, relativity, volume].filter(
     (entry): entry is ScoreSnapshotView => entry !== null

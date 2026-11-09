@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
+  EARLY_HISTORY_MIN_CANDLES,
+  buildLowHistoryComponents,
+  isLowHistory,
   normalizeWeeklyOhlcvCandles,
   resampleDailyToWeeklyCloses,
   VOLUME_CANDLE_COUNT,
@@ -69,6 +72,25 @@ describe("normalizeWeeklyOhlcvCandles", () => {
     if (!result.ok) {
       expect(result.nullReason).toBe("insufficient_candles")
     }
+  })
+})
+
+describe("early history helpers", () => {
+  it("flags counts below the required threshold", () => {
+    expect(isLowHistory(21, VOLUME_CANDLE_COUNT)).toBe(true)
+    expect(isLowHistory(30, VOLUME_CANDLE_COUNT)).toBe(false)
+  })
+
+  it("builds low-history component metadata", () => {
+    expect(buildLowHistoryComponents(21, VOLUME_CANDLE_COUNT)).toEqual({
+      low_history: true,
+      candle_count: 21,
+      required_candle_count: VOLUME_CANDLE_COUNT,
+    })
+
+    expect(buildLowHistoryComponents(EARLY_HISTORY_MIN_CANDLES, EARLY_HISTORY_MIN_CANDLES)).toEqual({
+      candle_count: EARLY_HISTORY_MIN_CANDLES,
+    })
   })
 })
 

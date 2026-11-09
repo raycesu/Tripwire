@@ -21,4 +21,5 @@ export type SectorSnapshotInput = {
   isStale: boolean
   computedAt: Date
   cadence: Cadence
+  componentsJson?: Record<string, unknown> | null
 }

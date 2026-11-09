@@ -8,6 +8,7 @@ import {
   getScoreInterpretation,
   getScoreToneFromString,
 } from "@/lib/scores/labels"
+import { formatEarlyHistoryBadge } from "@/lib/scores/low-history"
 import {
   buildArcSegments,
   describeArcSegmentPath,
@@ -260,6 +261,10 @@ export const ScoreSpeedometer = ({
   const isUnavailable = !snapshot || snapshot.isNull
   const numericScore = snapshot && !snapshot.isNull ? parseScoreValue(snapshot.score) : null
   const isStale = snapshot?.isStale ?? false
+  const isLowHistory = snapshot?.lowHistory ?? false
+  const earlyHistoryLabel = isLowHistory
+    ? formatEarlyHistoryBadge(snapshot?.candleCount ?? null)
+    : null
 
   const interpretation =
     numericScore !== null ? getScoreInterpretation(numericScore) : "Unavailable"
@@ -267,8 +272,8 @@ export const ScoreSpeedometer = ({
   const tone = snapshot && !snapshot.isNull ? getScoreToneFromString(snapshot.score) : null
 
   const ariaLabel = symbol
-    ? `${symbol} composite score ${formattedScore}, ${interpretation}${isStale ? ", stale" : ""}`
-    : `Composite score ${formattedScore}, ${interpretation}${isStale ? ", stale" : ""}`
+    ? `${symbol} composite score ${formattedScore}, ${interpretation}${isLowHistory ? `, ${earlyHistoryLabel}` : ""}${isStale ? ", stale" : ""}`
+    : `Composite score ${formattedScore}, ${interpretation}${isLowHistory ? `, ${earlyHistoryLabel}` : ""}${isStale ? ", stale" : ""}`
 
   const lastFilledSegmentIndex =
     !isUnavailable && numericScore !== null
@@ -401,7 +406,12 @@ export const ScoreSpeedometer = ({
           {isUnavailable && snapshot?.nullReason ? (
             <span className="max-w-[200px] text-xs text-muted-foreground">{snapshot.nullReason}</span>
           ) : null}
-          {isStale && !isUnavailable ? (
+          {isLowHistory && !isUnavailable && earlyHistoryLabel ? (
+            <span className="text-[10px] font-medium tracking-wider text-amber-400/90">
+              {earlyHistoryLabel}
+            </span>
+          ) : null}
+          {isStale && !isUnavailable && !isLowHistory ? (
             <span className="text-[10px] font-medium uppercase tracking-wider text-amber-400/90">
               Stale
             </span>

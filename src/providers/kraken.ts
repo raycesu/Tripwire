@@ -210,11 +210,12 @@ export const getWeeklyOhlcvRaw = async (
     throw new ProviderError(PROVIDER, `No Kraken USDT pair found for ${providerSymbol}`)
   }
 
-  const url = new URL(`${BASE_URL}/OHLC`)
-  url.searchParams.set("pair", pairEntry.pairKey)
-  url.searchParams.set("interval", String(WEEKLY_INTERVAL_MINUTES))
+  const searchParams = new URLSearchParams({
+    pair: pairEntry.pairKey,
+    interval: String(WEEKLY_INTERVAL_MINUTES),
+  })
 
-  const response = await fetchKrakenPublic(url.pathname + url.search, ohlcSchema)
+  const response = await fetchKrakenPublic(`/OHLC?${searchParams.toString()}`, ohlcSchema)
   const pairValue = response.result[pairEntry.pairKey]
   const pairRows = Array.isArray(pairValue) ? pairValue : []
 

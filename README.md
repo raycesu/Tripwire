@@ -23,9 +23,9 @@ Personal asset score machine for crypto and equities. Tripwire scores your watch
 | Sector | Cadence | Inputs (summary) |
 | --- | --- | --- |
 | **Macro** | Daily | Crypto: Fear & Greed + BTC weekly RSI. Stocks: VIX + S&P 500 weekly RSI. |
-| **Relativity** | Weekly | RSI vs. benchmark (`clamp((benchmark_rsi - asset_rsi) / 8, -2, +2)`). Crypto vs BTC; BTC vs SPY; stocks vs SPY. |
-| **Volume** | Weekly | 30 completed weekly OHLCV candles; Wilder RSI(14); trend/context/gate/decel formula. |
-| **Composite** | Daily refresh | Valid only when Macro, Relativity, and Volume are all valid (3/3). Stale sectors are excluded. |
+| **Relativity** | Weekly | RSI vs. benchmark (`clamp((benchmark_rsi - asset_rsi) / 8, -2, +2)`). Full at 28 weeks; early-history from 15–27 weeks. Crypto vs BTC; BTC vs SPY; stocks vs SPY. |
+| **Volume** | Weekly | Full at 30 completed weekly OHLCV candles; early-history from 15–29 weeks; Wilder RSI(14); trend/context/gate/decel formula. |
+| **Composite** | Daily refresh | Valid only when Macro, Relativity, and Volume are all valid (3/3). Stale sectors are excluded. Early-history sectors keep a numeric composite with an `Early history · Nw` badge and do not trigger alerts. |
 
 **Freshness:** daily sectors stale after 36 hours; weekly sectors stale after 8 days.
 

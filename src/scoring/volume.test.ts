@@ -77,19 +77,31 @@ describe("computeDecelFactor", () => {
 })
 
 describe("computeVolumeFromCandles", () => {
-  it("returns null when fewer than 30 candles", () => {
-    const result = computeVolumeFromCandles(buildCandles().slice(0, 20))
+  it("returns null when fewer than 15 candles", () => {
+    const result = computeVolumeFromCandles(buildCandles().slice(0, 14))
 
     expect(result.isNull).toBe(true)
     expect(result.nullReason).toBe("insufficient_candles")
   })
 
-  it("produces a bounded score for valid candles", () => {
+  it("marks early-history scores when under 30 candles", () => {
+    const result = computeVolumeFromCandles(buildCandles().slice(0, 21))
+
+    expect(result.isNull).toBe(false)
+    expect(result.score).not.toBeNull()
+    expect(result.components.low_history).toBe(true)
+    expect(result.components.candle_count).toBe(21)
+    expect(result.components.required_candle_count).toBe(30)
+  })
+
+  it("produces a bounded full-history score for 30 candles", () => {
     const result = computeVolumeFromCandles(buildCandles())
 
     expect(result.isNull).toBe(false)
     expect(result.score).not.toBeNull()
     expect(result.score!).toBeGreaterThanOrEqual(-2)
     expect(result.score!).toBeLessThanOrEqual(2)
+    expect(result.components.low_history).toBeUndefined()
+    expect(result.components.candle_count).toBe(30)
   })
 })

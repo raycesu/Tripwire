@@ -65,6 +65,21 @@ describe("doesRuleMatchSnapshot", () => {
     ).toBe(false)
   })
 
+  it("skips early-history snapshots even when above threshold", () => {
+    expect(
+      doesRuleMatchSnapshot(
+        { operator: "above", threshold: "1.00" },
+        baseSnapshot({
+          componentsJson: {
+            low_history: true,
+            candle_count: 21,
+            required_candle_count: 30,
+          },
+        })
+      )
+    ).toBe(false)
+  })
+
   it("never matches unknown operators", () => {
     expect(
       doesRuleMatchSnapshot({ operator: "below", threshold: "1.00" }, baseSnapshot())

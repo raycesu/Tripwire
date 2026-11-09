@@ -4,6 +4,7 @@ import {
   SCORE_TRACK_GRADIENT_INLINE,
 } from "@/lib/scores/colors"
 import { formatScore } from "@/lib/scores/labels"
+import { formatEarlyHistoryBadge } from "@/lib/scores/low-history"
 import { parseScoreValue, scoreToNormalizedPosition } from "@/lib/scores/gauge-math"
 import type { ScoreSnapshotView } from "@/lib/scores/types"
 
@@ -33,6 +34,10 @@ export const SectorScoreTube = ({
   const isUnavailable = !snapshot || snapshot.isNull
   const numericScore = snapshot && !snapshot.isNull ? parseScoreValue(snapshot.score) : null
   const isStale = snapshot?.isStale ?? false
+  const isLowHistory = snapshot?.lowHistory ?? false
+  const earlyHistoryLabel = isLowHistory
+    ? formatEarlyHistoryBadge(snapshot?.candleCount ?? null)
+    : null
   const formattedScore = snapshot && !snapshot.isNull ? formatScore(snapshot.score) : "—"
 
   const percent =
@@ -41,7 +46,7 @@ export const SectorScoreTube = ({
   const ariaLabel = snapshot
     ? snapshot.isNull
       ? `${label}: ${snapshot.nullReason ?? "unavailable"}`
-      : `${label}: ${formattedScore}${isStale ? ", stale" : ""}`
+      : `${label}: ${formattedScore}${isLowHistory ? `, ${earlyHistoryLabel}` : ""}${isStale ? ", stale" : ""}`
     : `${label}: no data`
 
   const isTableLayout = layout === "table"
@@ -49,7 +54,15 @@ export const SectorScoreTube = ({
 
   const scoreElement = (
     <div className="flex shrink-0 items-center gap-0.5">
-      {isStale && !isUnavailable && isInlineBarLayout ? (
+      {isLowHistory && !isUnavailable && isInlineBarLayout ? (
+        <span
+          className="max-w-[72px] truncate text-[8px] font-medium uppercase tracking-wider text-amber-400/90"
+          title={earlyHistoryLabel ?? undefined}
+        >
+          Early
+        </span>
+      ) : null}
+      {isStale && !isUnavailable && !isLowHistory && isInlineBarLayout ? (
         <span className="text-[8px] font-medium uppercase tracking-wider text-amber-400/90">
           Stale
         </span>
@@ -132,7 +145,12 @@ export const SectorScoreTube = ({
           {labelAction}
         </div>
         <div className="flex items-center gap-1.5">
-          {isStale && !isUnavailable ? (
+          {isLowHistory && !isUnavailable ? (
+            <span className="text-[9px] font-medium tracking-wider text-amber-400/90">
+              {earlyHistoryLabel}
+            </span>
+          ) : null}
+          {isStale && !isUnavailable && !isLowHistory ? (
             <span className="text-[9px] font-medium uppercase tracking-wider text-amber-400/90">
               Stale
             </span>

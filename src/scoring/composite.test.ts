@@ -51,4 +51,30 @@ describe("computeComposite", () => {
     expect(result.isNull).toBe(true)
     expect(result.nullReason).toBe("insufficient_valid_sectors")
   })
+
+  it("keeps a numeric composite and flags early history when a sector is low history", () => {
+    const result = computeComposite({
+      macro: buildSnapshot("macro", "1.20"),
+      relativity: buildSnapshot("relativity", "1.50", {
+        componentsJson: {
+          low_history: true,
+          candle_count: 21,
+          required_candle_count: 28,
+        },
+      }),
+      volume: buildSnapshot("volume", "1.80", {
+        componentsJson: {
+          low_history: true,
+          candle_count: 21,
+          required_candle_count: 30,
+        },
+      }),
+    })
+
+    expect(result.isNull).toBe(false)
+    expect(result.score).toBeCloseTo(1.5, 2)
+    expect(result.components.low_history).toBe(true)
+    expect(result.components.candle_count).toBe(21)
+    expect(result.components.low_history_sectors).toEqual(["relativity", "volume"])
+  })
 })

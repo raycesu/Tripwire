@@ -483,7 +483,9 @@ Inputs:
 
 - Asset weekly closes.
 - Benchmark weekly closes.
-- Minimum 28 weekly candles recommended for stable RSI.
+- Full Relativity requires 28 completed weekly candles for stable RSI.
+- Early-history Relativity may compute from 15–27 completed weekly candles and must store `low_history: true` plus `candle_count` in `components_json`.
+- Below 15 completed weekly candles, Relativity remains null with `insufficient_candles`.
 - Use the most recent completed weekly candle only.
 
 Implementation flow:
@@ -507,6 +509,7 @@ Edge cases:
 - If asset RSI cannot be computed, return null for Relativity.
 - If benchmark RSI cannot be computed, return null for Relativity.
 - Cache benchmark RSI per run so BTC or SPY is not fetched repeatedly for every watched asset.
+- Early-history Relativity scores are informational only: show an `Early history · Nw` badge and do not trigger Telegram alerts.
 
 ### 6.3 Volume
 
@@ -516,7 +519,9 @@ Purpose:
 
 Inputs:
 
-- 30 weekly OHLCV candles.
+- Full Volume requires 30 completed weekly OHLCV candles.
+- Early-history Volume may compute from 15–29 completed weekly candles using end-relative windows and must store `low_history: true` plus `candle_count` in `components_json`.
+- Below 15 completed weekly candles, Volume remains null with `insufficient_candles`.
 - Exclude in-progress weekly candles for stable production scores.
 - Index convention: `0` is oldest candle and `29` is the most recent completed weekly candle.
 - Crypto source: Binance US, Kraken, or Binance spot weekly klines.
@@ -639,10 +644,12 @@ Important implementation notes:
 
 - Use Wilder RSI(14).
 - Take the latest RSI output value, not an index-matched array position.
+- Use end-relative windows so early-history series (15–29 candles) can compute with the same component logic.
 - If `vol_prior` is zero, set `V_trend = 0`.
 - If price range is zero, set `P_context = 0`.
 - If required close values are zero, set `decel_factor = 1`.
 - The signal can lag exact bottoms by 1-2 weekly candles because it is confirming stabilization, not trying to predict the bottom wick.
+- Early-history Volume scores are informational only: show an `Early history · Nw` badge and do not trigger Telegram alerts.
 
 ## 7. Refresh Cadence
 
@@ -678,8 +685,9 @@ Composite rules:
 - Use the latest non-null, non-stale snapshots from Macro, Relativity, and Volume only.
 - Composite is valid only when all three sectors are valid (3/3).
 - If any sector is null, stale, or invalid, mark composite as null with `null_reason = "insufficient_valid_sectors"`.
+- If any included sector is early-history (`low_history: true`), keep a numeric composite and mark it early-history too; show `Early history · Nw` and do not trigger alerts.
 - Store which sectors were included in `components_json` when composite is valid.
-- UI should show sector-level freshness and explicitly label stale or null sectors.
+- UI should show sector-level freshness and explicitly label stale, null, or early-history sectors.
 - Do not silently mix stale sectors into a fresh composite.
 
 Market-calendar handling:
@@ -983,6 +991,7 @@ Crypto OHLCV fetch:
 - If `provider_name = "binance_us"`, fetch klines from Binance US; on failure, try Kraken for the same base symbol.
 - If `provider_name = "kraken"`, fetch klines from Kraken.
 - If `provider_name = "binance_global"`, fetch klines from Binance (`api.binance.com`) for the stored `USDT` pair. Do not reroute that provider through Binance US.
+- Kraken public calls must use path-only endpoints under the `/0/public` base (for example `/OHLC?...`), never a pathname that already includes `/0/public`.
 - Use `interval=1w` and the required `limit` for the sector.
 - Normalize provider responses into the same internal candle shape.
 - Store the selected provider and symbol in `source_metadata_json` on every score snapshot.
@@ -1016,7 +1025,9 @@ Provider and data edge cases:
 - Prefer Binance US, then Kraken, then Binance when more than one venue lists the same base symbol.
 - Cache exchange-info responses so symbol resolution does not call provider metadata endpoints repeatedly.
 - Throttle and deduplicate Twelve Data catalog and OHLCV requests to stay within free-tier limits.
-- If a stock provider cannot return enough weekly candles, return null for the affected sector with `null_reason = "insufficient_candles"`.
+- If a provider returns fewer than 15 completed weekly candles, return null for the affected sector with `null_reason = "insufficient_candles"`.
+- If a provider returns 15+ completed weekly candles but below the full Relativity (28) or Volume (30) threshold, compute an early-history score with `low_history: true` instead of nulling the sector.
+- Early-history scores must not match Telegram alert rules.
 - If a provider fails for one asset, continue scoring the rest of the watchlist.
 - If market data has missing candles, sort by timestamp, deduplicate, and validate minimum candle count before scoring.
 - If a stock market holiday removes the Friday close, use the last available trading day in that week.

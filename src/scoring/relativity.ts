@@ -6,8 +6,10 @@ import {
 } from "@/providers/market-data"
 import type { SourceMetadata, WeeklyOhlcvResult } from "@/providers/types"
 import {
-  normalizeWeeklyOhlcvCandles,
+  EARLY_HISTORY_MIN_CANDLES,
   RSI_MIN_CANDLE_COUNT,
+  buildLowHistoryComponents,
+  normalizeWeeklyOhlcvCandles,
 } from "@/scoring/candles"
 import { clamp, latestRsi } from "@/scoring/indicators"
 import { formatScoreNumber } from "@/scoring/thresholds"
@@ -71,7 +73,7 @@ export const computeRelativity = async ({
   const assetType = asset.assetType === "stock" ? "stock" : "crypto"
 
   const assetOhlcv =
-    weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, RSI_MIN_CANDLE_COUNT))
+    weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, EARLY_HISTORY_MIN_CANDLES))
 
   if (!assetOhlcv.ok) {
     return nullResult(assetOhlcv.nullReason, { error: assetOhlcv.message })
@@ -79,7 +81,7 @@ export const computeRelativity = async ({
 
   const assetNormalized = normalizeWeeklyOhlcvCandles(assetOhlcv.candles, {
     excludeInProgress: true,
-    minCount: RSI_MIN_CANDLE_COUNT,
+    minCount: EARLY_HISTORY_MIN_CANDLES,
   })
 
   if (!assetNormalized.ok) {
@@ -119,6 +121,7 @@ export const computeRelativity = async ({
   const relativityIndex = benchmarkRsi - assetRsi
   const score = clamp(relativityIndex / RELATIVITY_DIVISOR, -2, 2)
   const lastCandle = assetNormalized.candles[assetNormalized.candles.length - 1]
+  const candleCount = assetNormalized.candles.length
 
   return {
     score,
@@ -133,6 +136,7 @@ export const computeRelativity = async ({
       relativity_index: relativityIndex,
       score,
       formatted_score: formatScoreNumber(score),
+      ...buildLowHistoryComponents(candleCount, RSI_MIN_CANDLE_COUNT),
     },
   }
 }
