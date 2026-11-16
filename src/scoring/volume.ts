@@ -3,6 +3,7 @@ import { fetchWeeklyOhlcvFromDto } from "@/providers/market-data"
 import type { SourceMetadata, WeeklyOhlcvResult } from "@/providers/types"
 import {
   EARLY_HISTORY_MIN_CANDLES,
+  VOLUME_CANDLE_COUNT,
   normalizeWeeklyOhlcvCandles,
 } from "@/scoring/candles"
 import type { SectorScoreResult } from "@/scoring/types"
@@ -29,7 +30,7 @@ export const computeVolume = async (
     }
   }
 
-  const ohlcv = weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, EARLY_HISTORY_MIN_CANDLES))
+  const ohlcv = weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, VOLUME_CANDLE_COUNT))
 
   if (!ohlcv.ok) {
     return {

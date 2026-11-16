@@ -8,6 +8,7 @@ import type { SourceMetadata, WeeklyOhlcvResult } from "@/providers/types"
 import {
   EARLY_HISTORY_MIN_CANDLES,
   RSI_MIN_CANDLE_COUNT,
+  VOLUME_CANDLE_COUNT,
   buildLowHistoryComponents,
   normalizeWeeklyOhlcvCandles,
 } from "@/scoring/candles"
@@ -73,7 +74,7 @@ export const computeRelativity = async ({
   const assetType = asset.assetType === "stock" ? "stock" : "crypto"
 
   const assetOhlcv =
-    weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, EARLY_HISTORY_MIN_CANDLES))
+    weeklyOhlcv ?? (await fetchWeeklyOhlcvFromDto(asset, VOLUME_CANDLE_COUNT))
 
   if (!assetOhlcv.ok) {
     return nullResult(assetOhlcv.nullReason, { error: assetOhlcv.message })
